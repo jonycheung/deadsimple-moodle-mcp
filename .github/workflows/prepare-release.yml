@@ -3,9 +3,20 @@ name: Prepare Release Tag
 on:
   workflow_dispatch:
     inputs:
-      release_version:
-        description: 'Semver release number without v, e.g. 0.2.0'
+      release_type:
+        description: 'Version bump type'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - custom
         required: true
+        default: patch
+      custom_version:
+        description: 'Semver release number without v, required when release_type=custom (e.g. 0.2.0)'
+        required: false
+        default: ''
       target_branch:
         description: 'Branch to update before tagging'
         required: true
@@ -34,9 +45,61 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Resolve and validate release version
+        id: resolve
+        env:
+          RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          CUSTOM_VERSION: ${{ github.event.inputs.custom_version }}
+        run: |
+          set -euo pipefail
+
+          current_version="$(
+            php dev/bin/plugin-meta.php local-simplemcp/version.php \
+              | awk -F= '$1=="release_version"{print $2}'
+          )"
+          if [[ -z "$current_version" ]]; then
+            echo "::error::Could not read current release version from local-simplemcp/version.php"
+            exit 1
+          fi
+          if ! [[ "$current_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Current \$plugin->release version '$current_version' is not semver x.y.z."
+            exit 1
+          fi
+
+          if [[ "$RELEASE_TYPE" == "custom" ]]; then
+            if [[ -z "${CUSTOM_VERSION// }" ]]; then
+              echo "::error::custom_version is required when release_type=custom."
+              exit 1
+            fi
+            target_version="$(echo "$CUSTOM_VERSION" | xargs)"
+          else
+            if [[ -n "${CUSTOM_VERSION// }" ]]; then
+              echo "::error::custom_version must be empty unless release_type=custom."
+              exit 1
+            fi
+            IFS='.' read -r major minor patch <<< "$current_version"
+            case "$RELEASE_TYPE" in
+              patch) target_version="$major.$minor.$((patch + 1))" ;;
+              minor) target_version="$major.$((minor + 1)).0" ;;
+              major) target_version="$((major + 1)).0.0" ;;
+              *)
+                echo "::error::release_type must be one of patch, minor, major, custom."
+                exit 1
+                ;;
+            esac
+          fi
+
+          if ! [[ "$target_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Resolved target version '$target_version' is not valid semver x.y.z."
+            exit 1
+          fi
+
+          echo "version=$target_version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$target_version" >> "$GITHUB_OUTPUT"
+
       - name: Ensure tag does not already exist
         env:
-          TAG: v${{ github.event.inputs.release_version }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
             echo "::error::Tag $TAG already exists."
@@ -45,7 +108,7 @@ jobs:
 
       - name: Require CHANGELOG section for this release
         env:
-          VERSION: ${{ github.event.inputs.release_version }}
+          VERSION: ${{ steps.resolve.outputs.version }}
         run: |
           if ! grep -qE "^## \[$VERSION\]" CHANGELOG.md; then
             echo "::error::CHANGELOG.md has no '## [$VERSION]' section."
@@ -54,7 +117,7 @@ jobs:
 
       - name: Bump plugin version and release string
         env:
-          RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+          RELEASE_VERSION: ${{ steps.resolve.outputs.version }}
           RELEASE_SUFFIX: ${{ github.event.inputs.release_suffix }}
         run: |
           php <<'PHP'
@@ -110,12 +173,12 @@ jobs:
 
       - name: Verify version.php matches requested tag
         env:
-          TAG: v${{ github.event.inputs.release_version }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: php dev/bin/plugin-meta.php local-simplemcp/version.php --check-tag "$TAG"
 
       - name: Commit release metadata and create tag
         env:
-          TAG: v${{ github.event.inputs.release_version }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           git add local-simplemcp/version.php
           git commit -m "chore(release): prepare $TAG"
@@ -124,7 +187,7 @@ jobs:
       - name: Push commit and tag
         env:
           TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
-          TAG: v${{ github.event.inputs.release_version }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           git push origin "HEAD:$TARGET_BRANCH"
           git push origin "$TAG"

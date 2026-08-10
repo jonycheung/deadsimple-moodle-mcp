@@ -99,11 +99,15 @@ CI runs the first four on every push and pull request, across Moodle 4.1 LTS
 1. Move the `## [Unreleased]` notes in `CHANGELOG.md` under a `## [x.y.z]`
    heading and commit that change to your release branch.
 2. Run **Actions → Prepare Release Tag** with:
-   - `release_version`: semver without `v` (for example `0.2.0`)
+   - `release_type`: `patch`, `minor`, `major`, or `custom`
+   - `custom_version`: semver without `v` (for example `0.2.0`), required only
+     when `release_type=custom`
    - `target_branch`: branch to update before tagging (default `main`)
    - `release_suffix`: optional label (for example `POC`)
-3. The workflow bumps `$plugin->version`, sets `$plugin->release`, commits,
-   creates `vX.Y.Z`, and pushes both commit and tag.
+3. The workflow reads the current `$plugin->release`, resolves the next release
+   version from `release_type` (or uses `custom_version`), validates it,
+   bumps `$plugin->version`, sets `$plugin->release`, commits, creates
+   `vX.Y.Z`, and pushes both commit and tag.
 4. The tag starts the **Release** workflow. Its **publish** job is gated by the
    `release` environment, so it pauses for your approval before publishing.
 
