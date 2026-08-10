@@ -84,7 +84,7 @@ final class get_lesson_content_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $lessonmodule = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);
         $content = $this->insert_page($lessonmodule->id, 'Intro', '<p>Intro content</p>', 0);
-        $this->insert_page($lessonmodule->id, 'A secret quiz question', '<p>What is the answer?</p>', $content, qtype: 1);
+        $this->insert_page($lessonmodule->id, 'A secret quiz question', '<p>What is the answer?</p>', $content, 1);
 
         $learner = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($learner->id, $course->id, 'student');

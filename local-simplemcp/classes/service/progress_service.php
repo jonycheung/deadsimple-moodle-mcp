@@ -43,6 +43,8 @@ class progress_service {
     /**
      * Summarises a learner's own completion progress in one course.
      *
+     * @param int $userid The learner the request is acting as.
+     * @param int $courseid Course id to operate on.
      * @return array{completionEnabled: bool, progressPercent: ?int, completedCount: int, totalCount: int}
      */
     public function get_course_progress(int $userid, int $courseid): array {
@@ -88,6 +90,8 @@ class progress_service {
     /**
      * Finds the next activity the learner has not completed yet.
      *
+     * @param int $userid The learner the request is acting as.
+     * @param int $courseid Course id to operate on.
      * @return array{found: bool, lesson: ?array, reason: ?string}
      */
     public function get_next_available_activity(int $userid, int $courseid): array {

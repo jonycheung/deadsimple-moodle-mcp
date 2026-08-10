@@ -34,6 +34,8 @@ $PAGE->set_url(new moodle_url('/local/simplemcp/oauth/instructions.php'));
 $PAGE->set_title(get_string('pluginname', 'local_simplemcp'));
 $PAGE->set_pagelayout('standard');
 
+// Escaped once here because every place it lands — the heading and the
+// {{{bodyhtml}}} sections — is rendered as raw HTML by the template.
 $brand = s(simplemcpconfig::brand_name());
 $serverurl = $CFG->wwwroot . '/local/simplemcp/endpoint.php';
 

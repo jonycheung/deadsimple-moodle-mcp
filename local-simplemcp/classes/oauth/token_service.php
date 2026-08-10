@@ -41,6 +41,10 @@ class token_service {
     /**
      * Issues a fresh access/refresh token pair for one learner and client.
      *
+     * @param int $clientdbid Row id of the client in local_simplemcp_client.
+     * @param int $userid The learner the request is acting as.
+     * @param string $scope The scope being granted.
+     * @param string|null $familyid Existing reuse-detection family to keep this token in.
      * @return array{access_token: string, refresh_token: string, expires_in: int, scope: string}
      */
     public function issue_tokens(int $clientdbid, int $userid, string $scope, ?string $familyid = null): array {
@@ -83,6 +87,8 @@ class token_service {
     /**
      * Rotates a refresh token, revoking the whole family if a used one is replayed.
      *
+     * @param string $rawrefreshtoken The raw refresh token presented by the client.
+     * @param int $clientdbid Row id of the client in local_simplemcp_client.
      * @throws \moodle_exception with error:invalidgrant on any invalid,
      *         expired, revoked, or reused refresh token.
      */

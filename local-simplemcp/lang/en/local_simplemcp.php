@@ -62,6 +62,7 @@ $string['manage:empty'] = 'No apps are currently connected to your {$a} account.
 $string['manage:instructionslink'] = 'Need to connect a new app? See the instructions.';
 $string['manage:never'] = 'never';
 $string['manage:revoke'] = 'Revoke access';
+$string['manage:revokeconfirm'] = 'Disconnect "{$a}" from your account? It will immediately lose access, and any tokens it holds stop working. You can reconnect it later by approving it again.';
 $string['manage:unknownapp'] = 'Unknown app';
 $string['profile:colapp'] = 'App';
 $string['profile:colconnected'] = 'Connected';

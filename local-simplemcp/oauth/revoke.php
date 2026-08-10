@@ -34,6 +34,12 @@ use local_simplemcp\local\rate_limiter;
 use local_simplemcp\oauth\client_registry;
 use local_simplemcp\oauth\token_service;
 
+// JSON only: debugging() and any stray notice would otherwise be echoed into
+// the response body ahead of the JSON, breaking the contract this endpoint
+// promises. Turning display off here keeps diagnostics going to the server
+// log (Moodle routes them there instead) without corrupting the response.
+$CFG->debugdisplay = 0;
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 

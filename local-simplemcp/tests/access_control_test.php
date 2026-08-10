@@ -34,6 +34,8 @@ use local_simplemcp\service\lesson_content_service;
 final class access_control_test extends \advanced_testcase {
     /**
      * Creates a two-content-page linear lesson and returns its course module id.
+     *
+     * @param stdClass $course The course the activity belongs to.
      */
     private function create_linear_lesson(\stdClass $course): int {
         global $DB;

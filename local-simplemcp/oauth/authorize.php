@@ -198,9 +198,11 @@ if (data_submitted() && confirm_sesskey()) {
 }
 
 // The client name is attacker-controllable when dynamic registration is on
-// (see README, "Dynamic client registration"), so it is escaped here and the
-// assembled sentence is passed to the template as pre-escaped HTML.
-$clientname = s($client->name);
+// (see README, "Dynamic client registration"). It is passed to the template
+// raw, because every field below except introhtml is rendered with {{ }},
+// which escapes. Only introhtml is rendered with {{{ }}}, so only the copy
+// built into it is escaped here — escaping twice would render a client
+// called "Foo & Bar" as "Foo &amp;amp; Bar".
 
 $formfields = ['sesskey' => sesskey()];
 foreach (['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'code_challenge', 'code_challenge_method'] as $field) {
@@ -210,11 +212,11 @@ foreach (['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'code_
 $templatecontext = [
     'heading' => get_string('pluginname', 'local_simplemcp'),
     'introhtml' => get_string('consent:intro', 'local_simplemcp', [
-        'client' => html_writer::tag('strong', $clientname),
+        'client' => html_writer::tag('strong', s($client->name)),
         'brand' => s(simplemcpconfig::brand_name()),
     ]),
-    'canlabel' => get_string('consent:canlabel', 'local_simplemcp', $clientname),
-    'cannotlabel' => get_string('consent:cannotlabel', 'local_simplemcp', $clientname),
+    'canlabel' => get_string('consent:canlabel', 'local_simplemcp', $client->name),
+    'cannotlabel' => get_string('consent:cannotlabel', 'local_simplemcp', $client->name),
     'can' => array_map(
         static fn(string $key): array => ['text' => get_string($key, 'local_simplemcp')],
         ['consent:can:courses', 'consent:can:lessons', 'consent:can:progress']

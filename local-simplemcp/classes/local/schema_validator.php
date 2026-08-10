@@ -32,6 +32,8 @@ class schema_validator {
      * Validates $arguments against $schema, applying declared defaults for
      * missing optional properties.
      *
+     * @param array $schema The tool's declared input schema.
+     * @param array $arguments Raw arguments as sent by the client.
      * @return array Validated arguments, with defaults applied.
      * @throws mcp_exception with INVALID_PARAMS on any violation.
      */

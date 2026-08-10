@@ -49,6 +49,9 @@ abstract class abstract_tool implements tool_interface {
     /**
      *
      * Builds a successful MCP tool result envelope.
+     *
+     * @param string $text Human-readable text for the model.
+     * @param array $structuredcontent Machine-readable payload for the client.
      */
     protected function success(string $text, array $structuredcontent): array {
         return [

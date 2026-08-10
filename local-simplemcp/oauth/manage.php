@@ -43,9 +43,37 @@ $PAGE->set_title(get_string('pluginname', 'local_simplemcp'));
 $PAGE->set_pagelayout('standard');
 
 $revokeid = optional_param('revoke', 0, PARAM_INT);
-if ($revokeid && confirm_sesskey()) {
+$confirm = optional_param('confirm', 0, PARAM_INT);
+
+if ($revokeid) {
     $grant = $DB->get_record('local_simplemcp_grant', ['id' => $revokeid, 'userid' => $USER->id, 'timerevoked' => null]);
-    if ($grant) {
+
+    // Revocation is state-changing, so it must never happen on a bare GET:
+    // a browser prefetcher, a link scanner or a crawler following the link
+    // would silently disconnect the learner's app. The interstitial turns
+    // the actual revocation into a POST (single_button defaults to POST)
+    // and gives the learner a chance to back out.
+    if ($grant && !$confirm) {
+        $clientrecord = $DB->get_record('local_simplemcp_client', ['id' => $grant->clientid]);
+        $clientname = $clientrecord
+            ? format_string($clientrecord->name)
+            : get_string('manage:unknownapp', 'local_simplemcp');
+
+        echo $OUTPUT->header();
+        echo $OUTPUT->confirm(
+            get_string('manage:revokeconfirm', 'local_simplemcp', $clientname),
+            new moodle_url('/local/simplemcp/oauth/manage.php', [
+                'revoke' => $grant->id,
+                'confirm' => 1,
+                'sesskey' => sesskey(),
+            ]),
+            new moodle_url('/local/simplemcp/oauth/manage.php')
+        );
+        echo $OUTPUT->footer();
+        exit;
+    }
+
+    if ($grant && confirm_sesskey()) {
         $DB->set_field('local_simplemcp_grant', 'timerevoked', time(), ['id' => $grant->id]);
 
         // Revoking the grant also revokes every access/refresh token
@@ -83,9 +111,11 @@ foreach ($grants as $grant) {
                 ? userdate($grant->timelastused)
                 : get_string('manage:never', 'local_simplemcp'),
         ]),
+        // No sesskey here on purpose: this link only opens the confirmation
+        // page, which is what carries the sesskey into the POST that revokes.
         'revokeurl' => (new moodle_url(
             '/local/simplemcp/oauth/manage.php',
-            ['revoke' => $grant->id, 'sesskey' => sesskey()]
+            ['revoke' => $grant->id]
         ))->out(false),
         'revokelabel' => get_string('manage:revoke', 'local_simplemcp'),
     ];
@@ -96,7 +126,8 @@ echo $OUTPUT->heading(get_string('connectedappsheading', 'local_simplemcp'));
 echo $OUTPUT->render_from_template('local_simplemcp/connectedapps', [
     'instructionsurl' => (new moodle_url('/local/simplemcp/oauth/instructions.php'))->out(false),
     'instructionslabel' => get_string('manage:instructionslink', 'local_simplemcp'),
-    'emptymessage' => get_string('manage:empty', 'local_simplemcp', s(simplemcpconfig::brand_name())),
+    // Passed raw: the template renders it with {{ }}, which escapes.
+    'emptymessage' => get_string('manage:empty', 'local_simplemcp', simplemcpconfig::brand_name()),
     'apps' => $apps,
 ]);
 echo $OUTPUT->footer();

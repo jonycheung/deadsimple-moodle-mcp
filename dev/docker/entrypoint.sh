@@ -142,7 +142,11 @@ if ! site_installed; then
     log "Site installed. Admin login: ${MOODLE_ADMIN_USER} / ${MOODLE_ADMIN_PASSWORD}"
 else
     log "Running any pending upgrades..."
-    run_as_web "php ${MOODLE_DIR}/admin/cli/upgrade.php --non-interactive --allow-unstable" || true
+    # Deliberately not tolerated: a half-applied schema upgrade followed by a
+    # "Ready" line is worse than refusing to start, because every later
+    # failure then looks like a plugin bug rather than a broken upgrade.
+    run_as_web "php ${MOODLE_DIR}/admin/cli/upgrade.php --non-interactive --allow-unstable" \
+        || die "Moodle upgrade failed — not starting. Fix the upgrade, or 'make clean' to rebuild."
 fi
 
 # ---------------------------------------------------------------------------

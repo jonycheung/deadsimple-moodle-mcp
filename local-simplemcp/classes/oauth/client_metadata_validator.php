@@ -30,6 +30,8 @@ class client_metadata_validator {
      * https:// is always accepted; http://localhost and http://127.0.0.1
      * are accepted per RFC 8252's loopback exception for native/CLI
      * clients. Anything else (plain http, other schemes) is rejected.
+     *
+     * @param string $uri The redirect URI to validate.
      */
     public static function is_valid_redirect_uri(string $uri): bool {
         if (!filter_var($uri, FILTER_VALIDATE_URL)) {

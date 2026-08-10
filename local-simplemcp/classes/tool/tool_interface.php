@@ -59,6 +59,7 @@ interface tool_interface {
     /**
      * Checks raw client arguments against this tool's input schema.
      *
+     * @param array $arguments Raw arguments as sent by the client.
      * @throws \local_simplemcp\local\mcp_exception with INVALID_PARAMS on any
      *         schema violation.
      * @return array Validated arguments, with declared defaults applied.
@@ -69,6 +70,7 @@ interface tool_interface {
      * Runs the tool for the authenticated learner in $context.
      *
      * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context The context the content belongs to.
      * @return array MCP tool result: ['content' => [...], 'structuredContent' => [...], 'isError' => bool]
      */
     public function execute(array $arguments, request_context $context): array;

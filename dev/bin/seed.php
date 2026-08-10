@@ -216,6 +216,13 @@ if (!$learner) {
         'email' => $options['learner'] . '@example.com',
     ]);
     cli_writeln("Created learner {$learner->username} (id {$learner->id})");
+} else {
+    // Re-seeding must leave the account matching the credentials this script
+    // prints below, otherwise a second run with a different --password
+    // reports a login that does not work — and oauth-smoke.sh, which logs in
+    // as this learner, fails for a reason that looks nothing like the cause.
+    update_internal_user_password($learner, $options['password']);
+    cli_writeln("Reset password for existing learner {$learner->username} (id {$learner->id})");
 }
 
 if (!is_enrolled(context_course::instance($course->id), $learner->id)) {

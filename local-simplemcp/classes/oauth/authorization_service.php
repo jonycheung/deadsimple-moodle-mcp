@@ -30,6 +30,12 @@ class authorization_service {
     /**
      * Issues a single-use authorisation code for an approved grant.
      *
+     * @param int $clientdbid Row id of the client in local_simplemcp_client.
+     * @param int $userid The learner the request is acting as.
+     * @param string $redirecturi Redirect URI the code was issued against.
+     * @param string $scope The scope being granted.
+     * @param string $codechallenge The PKCE challenge to bind the code to.
+     * @param string $codechallengemethod The PKCE challenge method, e.g. S256.
      * @return string The raw authorisation code (returned to the client via
      *         redirect only — never stored in recoverable form).
      */
@@ -66,6 +72,10 @@ class authorization_service {
      * Consumes an authorisation code: single-use, expiry-checked, bound to
      * the exact client, redirect URI and PKCE verifier it was issued with.
      *
+     * @param string $rawcode The raw authorisation code presented by the client.
+     * @param int $clientdbid Row id of the client in local_simplemcp_client.
+     * @param string $redirecturi Redirect URI the code was issued against.
+     * @param string $codeverifier The PKCE verifier presented at token exchange.
      * @return \stdClass The consumed authcode record (userid, scope, clientid).
      * @throws \moodle_exception on any mismatch — callers must map this to
      *         a generic OAuth error, never revealing which check failed.

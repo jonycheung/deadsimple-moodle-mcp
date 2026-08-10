@@ -130,6 +130,7 @@ class moodle_book_repository implements lesson_repository_interface {
     /**
      * Chapters a learner may read, flattened into reading order.
      *
+     * @param int $bookid The book instance to read chapters from.
      * @return \stdClass[] Non-hidden chapters, in reading order.
      */
     private function visible_chapters(int $bookid): array {

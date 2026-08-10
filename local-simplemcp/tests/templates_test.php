@@ -67,17 +67,24 @@ final class templates_test extends \advanced_testcase {
     }
 
     /**
-     * A client name carrying markup is escaped, not rendered.
+     * A client name carrying markup is escaped, not rendered — and escaped
+     * exactly once.
+     *
+     * This mirrors how oauth/authorize.php builds the context: introhtml is
+     * rendered with {{{ }}} so it is escaped in PHP, while canlabel and
+     * cannotlabel are rendered with {{ }} so they are passed raw and escaped
+     * by Mustache. Escaping in both places would show a client called
+     * "Foo & Bar" as "Foo &amp;amp; Bar".
      */
     public function test_consent_template_escapes_a_hostile_client_name(): void {
         $this->resetAfterTest();
 
-        $name = s('<script>alert(1)</script>');
+        $name = '<script>alert(1)</script>';
 
         $html = $this->render('consent', [
             'heading' => 'Simple MCP Server',
             'introhtml' => get_string('consent:intro', 'local_simplemcp', [
-                'client' => \html_writer::tag('strong', $name),
+                'client' => \html_writer::tag('strong', s($name)),
                 'brand' => 'Example College',
             ]),
             'canlabel' => get_string('consent:canlabel', 'local_simplemcp', $name),
@@ -91,6 +98,25 @@ final class templates_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringContainsString('&lt;script&gt;', $html);
+        // Double escaping would turn the ampersand of &lt; into &amp;lt;.
+        $this->assertStringNotContainsString('&amp;lt;script', $html);
+    }
+
+    /**
+     * An ampersand in a brand name survives as a single escape.
+     */
+    public function test_connectedapps_template_does_not_double_escape(): void {
+        $this->resetAfterTest();
+
+        $html = $this->render('connectedapps', [
+            'instructionsurl' => 'https://example.com/instructions.php',
+            'instructionslabel' => 'See the instructions.',
+            'emptymessage' => get_string('manage:empty', 'local_simplemcp', 'Fish & Chips College'),
+            'apps' => [],
+        ]);
+
+        $this->assertStringContainsString('Fish &amp; Chips College', $html);
+        $this->assertStringNotContainsString('&amp;amp;', $html);
     }
 
     /**

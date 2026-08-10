@@ -26,27 +26,39 @@ namespace local_simplemcp\auth;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class authenticated_principal {
+    /** @var int Moodle user id this request acts as. */
+    public int $userid;
+
+    /** @var string The single scope the credential carries. */
+    public string $scope;
+
+    /** @var string Which credential store verified this: bearer_token or oauth_access_token. */
+    public string $credentialtype;
+
+    /** @var int|null Row id within that credential store, for auditing. */
+    public ?int $credentialid;
+
     /**
      * Records who a verified request is acting as.
+     *
+     * Written as plain assignments rather than constructor property promotion
+     * so the plugin still parses on PHP 7.4, which Moodle 4.1 supports.
+     *
+     * @param int $userid Moodle user id this request acts as.
+     * @param string $scope The single scope the credential carries.
+     * @param string $credentialtype Which credential store verified this: bearer_token or oauth_access_token.
+     * @param int|null $credentialid Row id within that credential store, for auditing.
      */
     public function __construct(
-        /**
-         * @var int Moodle user id this request acts as.
-         */
-        public int $userid,
-        /**
-         * @var string The single scope the credential carries.
-         */
-        public string $scope,
-        /**
-         * @var string Which credential store verified this: bearer_token or oauth_access_token.
-         */
-        public string $credentialtype,
-        /**
-         * @var int|null Row id within that credential store, for auditing.
-         */
-        public ?int $credentialid = null
+        int $userid,
+        string $scope,
+        string $credentialtype,
+        ?int $credentialid = null
     ) {
+        $this->userid = $userid;
+        $this->scope = $scope;
+        $this->credentialtype = $credentialtype;
+        $this->credentialid = $credentialid;
     }
 
     /**

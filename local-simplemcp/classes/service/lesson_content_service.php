@@ -157,6 +157,8 @@ class lesson_content_service {
      *
      * Most activity types name this "mod/<type>:view", but mod_book is the
      * one core exception — its base read capability is "mod/book:read".
+     *
+     * @param string $modname The activity type, e.g. 'lesson'.
      */
     public static function view_capability(string $modname): string {
         if ($modname === 'book') {

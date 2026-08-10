@@ -39,6 +39,10 @@ class content_search_service {
     /**
      * Searches content the learner can already read, ranked title first.
      *
+     * @param int $userid The learner the request is acting as.
+     * @param string $query The learner's search term.
+     * @param int|null $courseid Course id to operate on.
+     * @param int $limit Maximum number of results to return.
      * @return array[] Search hits per docs/mcp-poc-plan.md §13.
      */
     public function search(int $userid, string $query, ?int $courseid, int $limit): array {
@@ -70,6 +74,8 @@ class content_search_service {
     /**
      * The courses this search is allowed to look inside.
      *
+     * @param int $userid The learner the request is acting as.
+     * @param int|null $courseid Course id to operate on.
      * @return \stdClass[] Visible courses the learner is actively enrolled in.
      */
     private function accessible_courses(int $userid, ?int $courseid): array {
@@ -281,6 +287,14 @@ class content_search_service {
 
     /**
      * Shapes one search hit into the structure the tool returns.
+     *
+     * @param stdClass $course The course the activity belongs to.
+     * @param cm_info $cm The course module being read.
+     * @param string $lessontitle See the method description.
+     * @param string|null $sectionid Section identifier as returned by get_lesson().
+     * @param string|null $sectionheading See the method description.
+     * @param string $excerpt Short plain-text window around the match.
+     * @param string $matchtype Where the match was found: title, heading or body.
      */
     private function build_hit(
         \stdClass $course,

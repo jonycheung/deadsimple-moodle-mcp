@@ -37,16 +37,21 @@ final class request_context {
     public float $starttime;
 
     /**
+     * @var authenticated_principal The verified caller.
+     */
+    public authenticated_principal $principal;
+
+    /**
      * Starts the clock for one MCP request.
+     *
+     * Written as a plain assignment rather than constructor property
+     * promotion so the plugin still parses on PHP 7.4, which Moodle 4.1
+     * supports.
      *
      * @param authenticated_principal $principal The verified caller.
      */
-    public function __construct(
-        /**
-         * @var authenticated_principal The verified caller.
-         */
-        public authenticated_principal $principal
-    ) {
+    public function __construct(authenticated_principal $principal) {
+        $this->principal = $principal;
         $this->correlationid = bin2hex(random_bytes(8));
         $this->starttime = microtime(true);
     }

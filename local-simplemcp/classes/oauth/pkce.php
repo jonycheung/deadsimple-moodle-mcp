@@ -39,6 +39,7 @@ class pkce {
      *
      * @param string $verifier The code_verifier presented at the token endpoint.
      * @param string $challenge The code_challenge stored from the authorize request.
+     * @param string $method The code challenge method, e.g. S256.
      */
     public static function verify(string $verifier, string $challenge, string $method): bool {
         if (!self::is_supported_method($method)) {

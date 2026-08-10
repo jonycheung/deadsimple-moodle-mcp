@@ -42,6 +42,9 @@ class client_registry {
     /**
      * Exact string match only — no wildcard/prefix matching, per the plan's
      * "strict redirect-URI validation" requirement.
+     *
+     * @param stdClass $client The client record to check against.
+     * @param string $redirecturi Redirect URI the code was issued against.
      */
     public function is_redirect_uri_allowed(\stdClass $client, string $redirecturi): bool {
         $allowed = json_decode($client->redirecturis, true);

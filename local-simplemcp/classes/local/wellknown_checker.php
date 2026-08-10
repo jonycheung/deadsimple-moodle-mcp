@@ -118,6 +118,8 @@ class wellknown_checker {
     /**
      * Fetch /.well-known/oauth-authorization-server and confirm it resolves
      * to this plugin's own authorize.php, not a stale alias target.
+     *
+     * @param string $wwwroot The site's own root URL, with no trailing slash.
      */
     private static function check_authorization_server(string $wwwroot): array {
         $url = $wwwroot . '/.well-known/oauth-authorization-server';
@@ -148,6 +150,8 @@ class wellknown_checker {
     /**
      * Fetch /.well-known/oauth-protected-resource and confirm it resolves
      * to this plugin's own endpoint.php, not a stale alias target.
+     *
+     * @param string $wwwroot The site's own root URL, with no trailing slash.
      */
     private static function check_protected_resource(string $wwwroot): array {
         $url = $wwwroot . '/.well-known/oauth-protected-resource';
@@ -178,6 +182,7 @@ class wellknown_checker {
     /**
      * GET a URL with a short timeout.
      *
+     * @param string $url Absolute URL to request.
      * @return array{0: string, 1: ?string} [body, error]. Exactly one is
      *         meaningful — error is null on success.
      */

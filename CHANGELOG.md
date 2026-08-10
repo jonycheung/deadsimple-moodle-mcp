@@ -46,6 +46,12 @@ no section here.
 - Mustache templates for the OAuth consent screen, the connected-apps list and
   the learner instructions page, replacing inline HTML.
 - `$plugin->supported = [401, 500]` in `version.php`.
+- Development-tool robustness, from review feedback: `make phpcbf` no longer
+  swallows real tool failures (only phpcbf's own "I fixed things" exit codes),
+  `make check` includes phpmd, a failed upgrade in the dev container stops
+  startup instead of reporting "Ready", and re-running `seed.php` with a
+  different `--password` now actually applies it rather than printing
+  credentials that do not work.
 
 ### Changed
 
@@ -64,6 +70,24 @@ no section here.
 
 ### Fixed
 
+- **Learner-facing copy was double-escaped.** The consent screen and
+  connected-apps page pre-escaped the client and brand names in PHP and then
+  rendered them through Mustache's escaping `{{ }}`, so a client called
+  "Foo & Bar" displayed as "Foo &amp;amp; Bar". Only the one field rendered
+  with `{{{ }}}` is escaped in PHP now; everything else is passed raw and left
+  to Mustache. Covered by tests that fail on a second round of escaping.
+- **Revoking a connected app happened on a bare GET.** The revoke link carried
+  a sesskey but was still a link, so a browser prefetcher, link scanner or
+  crawler following it would disconnect a learner's app without them clicking
+  anything. It now opens a confirmation page whose button POSTs.
+- **An unexpected endpoint failure could return non-JSON.** `debugging()`
+  writes into the response body when debug display is on, so a caught
+  exception produced notice HTML followed by the JSON-RPC error — invalid
+  JSON to any client. The four JSON endpoints now turn debug display off,
+  which also routes the diagnostic to the server log instead.
+- **Moodle privacy exports omitted a declared table.** The provider's metadata
+  declared `local_simplemcp_authcode`, but `export_user_data()` never read it,
+  so a learner's data request silently excluded their authorisation codes.
 - **The OAuth clients admin screen was fatal on Moodle 4.3 and later.** It
   called `get_all_user_name_fields()`, deprecated in Moodle 3.11 and removed in
   4.3, so `admin/clients.php` died with "Call to undefined function" on every
@@ -101,10 +125,11 @@ no section here.
   Earlier documentation stated none of it had been driven through a browser
   and a token exchange; that is no longer true. It still has not been tested
   against a real ChatGPT or Claude connector.
-- **This plugin requires PHP 8.0 or later.** It uses constructor property
-  promotion, which PHP 7.4 cannot parse. Moodle 4.1 itself still supports 7.4,
-  so a 4.1 site must be on PHP 8.0+ to install this. CI's lint floor is 8.0 for
-  the same reason.
+- **The plugin now genuinely supports PHP 7.4**, matching the Moodle 4.1 range
+  it advertises. It previously used constructor property promotion, which 7.4
+  cannot parse, so a 4.1 site on 7.4 would have failed at runtime despite the
+  metadata claiming support. Those two constructors are plain assignments now,
+  every file is verified to parse as 7.4, and CI lints from 7.4 upwards.
 
 ## [0.1.0] - 2026-08-10
 

@@ -138,6 +138,7 @@ class moodle_lesson_repository implements lesson_repository_interface {
     /**
      * Walks the lesson's page chain, failing closed on anything non-linear.
      *
+     * @param int $lessonid The lesson instance to read pages from.
      * @return \stdClass[] Ordered, content-type-only pages.
      */
     private function load_ordered_content_pages(int $lessonid): array {

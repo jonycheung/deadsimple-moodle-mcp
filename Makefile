@@ -92,16 +92,21 @@ phpcs: ## Check the Moodle coding standard
 
 .PHONY: phpcbf
 phpcbf: ## Auto-fix what the coding standard can fix
-	$(MOODLE) /opt/moodle-plugin-ci/vendor/bin/phpcbf \
-		--standard=moodle /var/www/html/local/simplemcp || true
+	@# phpcbf exits 1 when it fixed something and 2 when fixable and unfixable
+	@# problems both remain — neither is a failure. Anything above that is a
+	@# real error (missing binary, unwritable file) and must not be swallowed.
+	@$(MOODLE) /opt/moodle-plugin-ci/vendor/bin/phpcbf \
+		--standard=moodle /var/www/html/local/simplemcp; \
+	status=$$?; \
+	if [ $$status -gt 2 ]; then echo "phpcbf failed with exit $$status" >&2; exit $$status; fi
 
 .PHONY: phpdoc
 phpdoc: ## Check PHPDoc completeness
 	$(MOODLE) moodle-plugin-ci phpdoc --max-warnings 0 /var/www/html/local/simplemcp
 
 .PHONY: phpmd
-phpmd: ## Run the mess detector
-	$(MOODLE) moodle-plugin-ci phpmd /var/www/html/local/simplemcp
+phpmd: ## Run the mess detector (advisory — CI does not fail on it either)
+	-$(MOODLE) moodle-plugin-ci phpmd /var/www/html/local/simplemcp
 
 .PHONY: mustache
 mustache: ## Lint the Mustache templates
@@ -112,7 +117,7 @@ validate: ## Check version.php, lang strings and plugin structure
 	$(MOODLE) moodle-plugin-ci validate /var/www/html/local/simplemcp
 
 .PHONY: check
-check: phpcs phpdoc mustache validate phpunit ## Run every check CI runs
+check: phpcs phpdoc phpmd mustache validate phpunit ## Run every check CI runs
 
 .PHONY: behat
 behat: ## Run the Behat features (starts a Chrome container)

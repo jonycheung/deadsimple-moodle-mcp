@@ -32,6 +32,7 @@ class dispatcher {
      * Handles one parsed JSON-RPC request and returns its response.
      *
      * @param mixed $payload Decoded JSON body (already confirmed to be an array).
+     * @param authenticated_principal $principal The verified caller.
      * @return array|null The JSON-RPC response, or null for notifications
      *         (no response body should be sent).
      */

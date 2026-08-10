@@ -45,6 +45,7 @@ class tool_registry {
     /**
      * Lists the tools this learner is permitted to see.
      *
+     * @param request_context $context The context the content belongs to.
      * @return tool_interface[] Tools the current principal is permitted to see.
      */
     public static function list_available(request_context $context): array {
@@ -61,6 +62,8 @@ class tool_registry {
     /**
      * Resolves one tool by name, enforcing its capability requirement.
      *
+     * @param string $name The tool name requested by the client.
+     * @param request_context $context The context the content belongs to.
      * @throws mcp_exception METHOD_NOT_FOUND if no such tool exists,
      *         PERMISSION_DENIED if it exists but the principal lacks the
      *         required capability.

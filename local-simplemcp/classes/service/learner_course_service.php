@@ -29,6 +29,8 @@ class learner_course_service {
     /**
      * Lists the courses a learner is currently enrolled in and may see.
      *
+     * @param int $userid The learner the request is acting as.
+     * @param bool $includecompleted Whether to include courses the learner has completed.
      * @return array[] Course DTOs, per docs/mcp-poc-plan.md §10.1.
      */
     public function get_my_courses(int $userid, bool $includecompleted = true): array {

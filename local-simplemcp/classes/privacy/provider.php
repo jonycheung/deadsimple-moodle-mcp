@@ -171,6 +171,14 @@ class provider implements
             ];
         }, array_values($grants));
 
+        $authcodes = $DB->get_records('local_simplemcp_authcode', ['userid' => $userid]);
+        $authcodedata = array_map(static fn ($c): array => [
+            'scope' => $c->scope,
+            'timecreated' => transform::datetime($c->timecreated),
+            'timeexpires' => transform::datetime($c->timeexpires),
+            'timeused' => $c->timeused ? transform::datetime($c->timeused) : null,
+        ], array_values($authcodes));
+
         $accesstokens = $DB->get_records('local_simplemcp_access', ['userid' => $userid]);
         $accesstokendata = array_map(static fn ($a): array => [
             'scope' => $a->scope,
@@ -194,6 +202,7 @@ class provider implements
                 'tokens' => $tokendata,
                 'audit' => $auditdata,
                 'connectedApps' => $grantdata,
+                'oauthAuthorisationCodes' => $authcodedata,
                 'oauthAccessTokens' => $accesstokendata,
                 'oauthRefreshTokens' => $refreshtokendata,
             ]
