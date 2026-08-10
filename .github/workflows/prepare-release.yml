@@ -1,0 +1,130 @@
+name: Prepare Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Semver release number without v, e.g. 0.2.0'
+        required: true
+      target_branch:
+        description: 'Branch to update before tagging'
+        required: true
+        default: main
+      release_suffix:
+        description: 'Optional release suffix, e.g. POC (stored as "0.2.0 (POC)")'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Bump version.php and push tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure tag does not already exist
+        env:
+          TAG: v${{ github.event.inputs.release_version }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag $TAG already exists."
+            exit 1
+          fi
+
+      - name: Require CHANGELOG section for this release
+        env:
+          VERSION: ${{ github.event.inputs.release_version }}
+        run: |
+          if ! grep -qE "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$VERSION]' section."
+            exit 1
+          fi
+
+      - name: Bump plugin version and release string
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+          RELEASE_SUFFIX: ${{ github.event.inputs.release_suffix }}
+        run: |
+          php <<'PHP'
+          <?php
+          $path = 'local-simplemcp/version.php';
+          $text = file_get_contents($path);
+          if ($text === false) {
+              fwrite(STDERR, "Unable to read $path\n");
+              exit(1);
+          }
+
+          if (!preg_match('/\$plugin->version\s*=\s*(\d+)\s*;/', $text, $m)) {
+              fwrite(STDERR, "Unable to find \$plugin->version in $path\n");
+              exit(1);
+          }
+          $newversion = (string) (((int) $m[1]) + 1);
+
+          $releaseversion = trim((string) getenv('RELEASE_VERSION'));
+          $suffix = trim((string) getenv('RELEASE_SUFFIX'));
+          if ($releaseversion === '') {
+              fwrite(STDERR, "RELEASE_VERSION is required\n");
+              exit(1);
+          }
+          $release = $releaseversion . ($suffix !== '' ? " ($suffix)" : '');
+
+          $updated = preg_replace(
+              '/(\$plugin->version\s*=\s*)\d+(\s*;)/',
+              '$1' . $newversion . '$2',
+              $text,
+              1
+          );
+          if ($updated === null) {
+              fwrite(STDERR, "Failed updating \$plugin->version\n");
+              exit(1);
+          }
+
+          $updated = preg_replace(
+              "/(\\$plugin->release\\s*=\\s*)'[^']*'(\\s*;)/",
+              '$1' . "'" . addslashes($release) . "'" . '$2',
+              $updated,
+              1
+          );
+          if ($updated === null) {
+              fwrite(STDERR, "Failed updating \$plugin->release\n");
+              exit(1);
+          }
+
+          if (file_put_contents($path, $updated) === false) {
+              fwrite(STDERR, "Unable to write $path\n");
+              exit(1);
+          }
+          PHP
+
+      - name: Verify version.php matches requested tag
+        env:
+          TAG: v${{ github.event.inputs.release_version }}
+        run: php dev/bin/plugin-meta.php local-simplemcp/version.php --check-tag "$TAG"
+
+      - name: Commit release metadata and create tag
+        env:
+          TAG: v${{ github.event.inputs.release_version }}
+        run: |
+          git add local-simplemcp/version.php
+          git commit -m "chore(release): prepare $TAG"
+          git tag "$TAG"
+
+      - name: Push commit and tag
+        env:
+          TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
+          TAG: v${{ github.event.inputs.release_version }}
+        run: |
+          git push origin "HEAD:$TARGET_BRANCH"
+          git push origin "$TAG"

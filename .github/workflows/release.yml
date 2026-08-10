@@ -109,6 +109,8 @@ jobs:
     name: Build zip and publish release
     needs: verify
     runs-on: ubuntu-latest
+    environment:
+      name: release
     permissions:
       contents: write
 
