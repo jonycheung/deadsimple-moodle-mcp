@@ -225,13 +225,25 @@ jobs:
           MOODLE_BRANCH: MOODLE_401_STABLE
           IGNORE_PATHS: dev
 
-      - name: Serve the site and enable the plugin
+      - name: Install a real Moodle site
         run: |
-          # Pin wwwroot to the address the built-in server will listen on, so
-          # the seeded token, the endpoint URL and the OAuth redirects agree.
+          # moodle-plugin-ci install prepares the PHPUnit and Behat databases
+          # (phpu_/bht_ prefixes) but never installs a browsable site, so the
+          # mdl_ tables do not exist yet. The smoke tests drive the plugin over
+          # HTTP as a logged-in learner, which needs an actual site.
           sed -i "s#^\$CFG->wwwroot.*#\$CFG->wwwroot = 'http://127.0.0.1:8000';#" moodle/config.php
           grep -n 'wwwroot' moodle/config.php
 
+          php moodle/admin/cli/install_database.php \
+            --agree-license \
+            --adminuser=admin \
+            --adminpass='Moodle.ci1' \
+            --adminemail=admin@example.com \
+            --fullname='Simple MCP CI' \
+            --shortname='simplemcp-ci'
+
+      - name: Serve the site and enable the plugin
+        run: |
           php -S 127.0.0.1:8000 -t moodle > /tmp/webserver.log 2>&1 &
           for _ in $(seq 1 30); do
             if curl -sf -o /dev/null http://127.0.0.1:8000/; then break; fi

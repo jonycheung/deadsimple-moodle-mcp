@@ -104,6 +104,10 @@ no section here.
   debug display on, replaced the page with an error. The check now sets
   `ignoresecurity`, which is safe because the only URL it ever fetches is the
   site's own `wwwroot` with no user-suppliable input.
+- Language strings are ordered alphabetically, as `moodle.Files.LangFilesOrdering`
+  requires. That sniff only runs when moodle-cs can detect a Moodle 4.5+ tree
+  around the plugin, so it is invisible both when linting the plugin standalone
+  and on Moodle 4.1 — CI's 4.5 and 5.0 legs are what caught it.
 - The plugin now passes `phpcs --standard=moodle` and `--standard=moodle-extra`
   cleanly. It previously had 343 violations, including 117 missing function
   docblocks and 57 unnecessary `MOODLE_INTERNAL` guards, which would have
