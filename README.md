@@ -1,4 +1,4 @@
-# local_simplemcp — a read-only MCP server for Moodle
+# Deadsimple Moodle MCP (local_simplemcp) — a read-only MCP server for Moodle
 
 [![CI](https://github.com/jonycheung/deadsimple-moodle-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/jonycheung/deadsimple-moodle-mcp/actions/workflows/ci.yml)
 
