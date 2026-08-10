@@ -96,21 +96,29 @@ CI runs the first four on every push and pull request, across Moodle 4.1 LTS
 
 ## Releasing
 
-1. Update `$plugin->version` and `$plugin->release` in
-   `local-simplemcp/version.php`.
-2. Move the `## [Unreleased]` notes in `CHANGELOG.md` under a `## [x.y.z]`
-   heading.
-3. Commit, then tag and push:
+1. Move the `## [Unreleased]` notes in `CHANGELOG.md` under a `## [x.y.z]`
+   heading and commit that change to your release branch.
+2. Run **Actions → Prepare Release Tag** with:
+   - `release_type`: `patch`, `minor`, `major`, or `custom`
+   - `custom_version`: semver without `v` (for example `0.2.0`), required only
+     when `release_type=custom`
+   - `target_branch`: branch to update before tagging (default `main`)
+   - `release_suffix`: optional label (for example `POC`)
+3. The workflow reads the current `$plugin->release`, resolves the next release
+   version from `release_type` (or uses `custom_version`), validates it,
+   bumps `$plugin->version`, sets `$plugin->release`, commits, creates
+   `vX.Y.Z`, and pushes both commit and tag.
+4. The tag starts the **Release** workflow. Its **publish** job is gated by the
+   `release` environment, so it pauses for your approval before publishing.
 
-   ```bash
-   git tag v0.2.0 && git push origin v0.2.0
-   ```
-
-The release workflow then verifies the tag matches `version.php`, requires a
+The release workflow verifies the tag matches `version.php`, requires a
 matching CHANGELOG section, re-runs the checks against Moodle 4.1, builds
 `local_simplemcp_moodle_v0.2.0.zip` with `simplemcp/` as its single root
 directory, and publishes it as a GitHub release with a SHA-256 checksum.
 Anything below `MATURITY_STABLE` is published as a pre-release.
+
+> One-time setup: in repository settings, create an environment named
+> `release` and add yourself as a required reviewer so approval is enforced.
 
 The workflow fails rather than publishing if the tag and `version.php` disagree,
 so a released zip can never report a version it is not.
