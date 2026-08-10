@@ -104,7 +104,7 @@ final class book_content_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $bookmodule = $this->getDataGenerator()->create_module('book', ['course' => $course->id]);
         $this->insert_chapter($bookmodule->id, 1, 'Visible Chapter', '<p>visible content</p>');
-        $hiddenid = $this->insert_chapter($bookmodule->id, 2, 'Secret Chapter', '<p>secret content</p>', hidden: 1);
+        $hiddenid = $this->insert_chapter($bookmodule->id, 2, 'Secret Chapter', '<p>secret content</p>', 1);
 
         $learner = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($learner->id, $course->id, 'student');

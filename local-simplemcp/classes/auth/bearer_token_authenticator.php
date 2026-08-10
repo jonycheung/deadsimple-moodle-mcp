@@ -82,11 +82,13 @@ class bearer_token_authenticator implements authenticator_interface {
 
         $DB->set_field('local_simplemcp_token', 'timelastused', $now, ['id' => $record->id]);
 
+        // Positional, not named, arguments: named arguments are PHP 8.0 only
+        // and this plugin still supports PHP 7.4, the floor Moodle 4.1 allows.
         return new authenticated_principal(
-            userid: (int) $record->userid,
-            scope: (string) $record->scope,
-            credentialtype: 'bearer_token',
-            credentialid: (int) $record->id
+            (int) $record->userid,
+            (string) $record->scope,
+            'bearer_token',
+            (int) $record->id
         );
     }
 }

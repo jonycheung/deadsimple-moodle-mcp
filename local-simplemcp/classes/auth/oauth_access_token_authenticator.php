@@ -70,11 +70,13 @@ class oauth_access_token_authenticator implements authenticator_interface {
             throw new mcp_exception(mcp_exception::AUTH_REQUIRED, 'error:authrequired');
         }
 
+        // Positional, not named, arguments: named arguments are PHP 8.0 only
+        // and this plugin still supports PHP 7.4, the floor Moodle 4.1 allows.
         return new authenticated_principal(
-            userid: (int) $record->userid,
-            scope: (string) $record->scope,
-            credentialtype: 'oauth_access_token',
-            credentialid: (int) $record->id
+            (int) $record->userid,
+            (string) $record->scope,
+            'oauth_access_token',
+            (int) $record->id
         );
     }
 }
