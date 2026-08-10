@@ -69,12 +69,20 @@ Combinations worth testing, matching what CI covers:
 
 | `MOODLE_BRANCH` | `PHP_VERSION` | Why |
 |---|---|---|
-| `MOODLE_401_STABLE` | `8.0` or `8.1` | The oldest supported site (default) |
+| `MOODLE_401_STABLE` | `8.0` or `8.1` | The oldest supported branch (default) |
+| `v4.1.2` | `8.0` or `8.1` | The exact point release OBC runs |
 | `MOODLE_405_STABLE` | `8.2` | The LTS most sites are on |
 | `MOODLE_500_STABLE` | `8.3` | Forward compatibility |
 
-Moodle enforces its own PHP range: 4.1 rejects PHP 8.2+, and 4.5 rejects 8.4.
-Pair them from the table rather than mixing freely.
+`MOODLE_BRANCH` is passed straight to `git clone --branch`, so **a tag works as
+well as a branch**. Pinning an exact point release is worth doing before a
+deploy: `MOODLE_401_STABLE` has moved a long way past 4.1.2, so testing only the
+branch head can hide a dependency on a core change that landed after the release
+actually in production.
+
+Moodle enforces its own PHP range: 4.5 rejects PHP 8.4, and 5.0 requires 8.2+.
+Moodle 4.1 does not hard-cap the upper end, but its supported range is 7.4–8.1
+and this plugin needs 8.0+, so pair 4.1 with 8.0 or 8.1.
 
 ## Testing
 

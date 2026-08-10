@@ -88,8 +88,13 @@ no section here.
 ### Notes
 
 - **The PHPUnit suite has now actually been run.** All 58 tests pass against
-  Moodle 5.0 on PHP 8.4 with PostgreSQL 16. Earlier documentation stated the
-  tests had been written but never executed; that is no longer true.
+  Moodle 4.1.2 — the exact point release OBC runs — and against Moodle 5.0,
+  both on PostgreSQL. Earlier documentation stated the tests had been written
+  but never executed; that is no longer true.
+- CI pins one matrix leg to the `v4.1.2` tag rather than testing only
+  `MOODLE_401_STABLE`. The branch head has moved a long way past 4.1.2, so
+  testing the head alone would hide a dependency on a core change that landed
+  after the release actually in production.
 - **The OAuth flow has now actually been exercised end to end**, against a
   running Moodle site: consent screen, PKCE verification, single-use codes,
   refresh rotation, reuse detection and revocation all behave as documented.

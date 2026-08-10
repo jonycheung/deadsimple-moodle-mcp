@@ -74,7 +74,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Lowest supported: Moodle 4.1 LTS, the version this plugin targets.
+          # The exact point release OBC runs. MOODLE_BRANCH accepts a tag, and
+          # pinning one matters: MOODLE_401_STABLE has moved a long way past
+          # 4.1.2, so testing only the branch head would hide anything that
+          # relies on a core change landed after this release.
+          - moodle-branch: v4.1.2
+            php: '8.1'
+            database: pgsql
+          # Lowest supported branch head: Moodle 4.1 LTS. PHP stays at 8.1 —
+          # moodle-plugin-ci v4 itself requires 8.1+, so PHP 8.0 is covered by
+          # the lint job above rather than here.
           - moodle-branch: MOODLE_401_STABLE
             php: '8.1'
             database: pgsql
