@@ -34,6 +34,12 @@ use local_simplemcp\local\rate_limiter;
 use local_simplemcp\oauth\client_registry;
 use local_simplemcp\oauth\token_service;
 
+// JSON only: debugging() and any stray notice would otherwise be echoed into
+// the response body ahead of the JSON, breaking the contract this endpoint
+// promises. Turning display off here keeps diagnostics going to the server
+// log (Moodle routes them there instead) without corrupting the response.
+$CFG->debugdisplay = 0;
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -81,13 +87,7 @@ if ($token !== '') {
             $tokenservice->revoke_refresh_token($token, (int) $client->id);
         }
     } catch (\Throwable $e) {
-        error_log(sprintf(
-            'local_simplemcp oauth/revoke.php error: %s: %s in %s:%d',
-            get_class($e),
-            $e->getMessage(),
-            $e->getFile(),
-            $e->getLine()
-        ));
+        \local_simplemcp\local\logger::exception('oauth/revoke.php', $e);
     }
 }
 

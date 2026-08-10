@@ -22,14 +22,18 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Adds a "Connected apps (MCP)" section to the user's own profile page
  * (/user/profile.php), listing their currently connected MCP clients in a
  * small table (name, connected, last used) — similar in spirit to how the
  * mobile app's active sessions are surfaced — plus links to manage/revoke
  * connections and to the "how to connect" instructions page.
+ *
+ * @param \core_user\output\myprofile\tree $tree The profile tree to add the category to.
+ * @param stdClass $user The user whose profile is being viewed.
+ * @param bool $iscurrentuser Whether the viewer is looking at their own profile.
+ * @param stdClass|null $course The course the profile is being viewed in, if any.
+ * @return void
  */
 function local_simplemcp_myprofile_navigation(
     \core_user\output\myprofile\tree $tree,
@@ -58,10 +62,14 @@ function local_simplemcp_myprofile_navigation(
     );
 
     if (empty($grants)) {
-        $content = html_writer::tag('p', 'No apps are currently connected.');
+        $content = html_writer::tag('p', get_string('profile:noapps', 'local_simplemcp'));
     } else {
         $table = new html_table();
-        $table->head = ['App', 'Connected', 'Last used'];
+        $table->head = [
+            get_string('profile:colapp', 'local_simplemcp'),
+            get_string('profile:colconnected', 'local_simplemcp'),
+            get_string('profile:collastused', 'local_simplemcp'),
+        ];
         $table->data = [];
         foreach ($grants as $grant) {
             $table->data[] = [
@@ -69,7 +77,7 @@ function local_simplemcp_myprofile_navigation(
                 userdate($grant->timecreated, get_string('strftimedatefullshort', 'langconfig')),
                 $grant->timelastused
                     ? userdate($grant->timelastused, get_string('strftimedatefullshort', 'langconfig'))
-                    : 'never',
+                    : get_string('manage:never', 'local_simplemcp'),
             ];
         }
         $content = html_writer::table($table);
@@ -77,9 +85,15 @@ function local_simplemcp_myprofile_navigation(
 
     $content .= html_writer::tag(
         'p',
-        html_writer::link(new moodle_url('/local/simplemcp/oauth/manage.php'), 'Manage connections')
+        html_writer::link(
+            new moodle_url('/local/simplemcp/oauth/manage.php'),
+            get_string('profile:managelink', 'local_simplemcp')
+        )
         . ' · '
-        . html_writer::link(new moodle_url('/local/simplemcp/oauth/instructions.php'), 'How to connect a new app')
+        . html_writer::link(
+            new moodle_url('/local/simplemcp/oauth/instructions.php'),
+            get_string('profile:connectlink', 'local_simplemcp')
+        )
     );
 
     $category = new \core_user\output\myprofile\category(

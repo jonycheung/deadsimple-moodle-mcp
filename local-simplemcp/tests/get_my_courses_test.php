@@ -18,9 +18,9 @@ namespace local_simplemcp;
 
 use local_simplemcp\service\learner_course_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests the learner's own enrolled-course listing.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Fixed-window per-minute rate limiting backed by the Moodle cache API.
  *
@@ -27,6 +25,8 @@ defined('MOODLE_INTERNAL') || die();
  */
 class rate_limiter {
     /**
+     * Counts one call against a per-minute budget, failing closed when it is spent.
+     *
      * @param string $key Stable identifier for the caller, e.g. "token:123".
      * @param int $limitperminute
      * @throws mcp_exception with RATE_LIMITED when the limit is exceeded.

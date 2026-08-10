@@ -1,0 +1,22 @@
+# Local build output
+/build/
+*.zip
+*.zip.sha256
+
+# Local dev environment
+/.env
+/dev/.env
+
+# Editors
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Dependencies, if anyone runs composer or npm at the repo root
+/vendor/
+/node_modules/
+
+# Moodle artefacts that must never be committed from a dev checkout
+/moodledata/
+config.php

@@ -20,8 +20,6 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\local\rate_limiter;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Authenticates a Milestone 5 OAuth access token (local_simplemcp_access).
  * Never stores or logs the raw token — only its SHA-256 hash.
@@ -31,6 +29,12 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class oauth_access_token_authenticator implements authenticator_interface {
+    /**
+     * Verifies the incoming credential and resolves the learner behind it.
+     *
+     * @return authenticated_principal The verified caller.
+     * @throws \local_simplemcp\local\mcp_exception AUTH_REQUIRED when no usable credential is present.
+     */
     public function authenticate(): authenticated_principal {
         global $DB;
 
@@ -66,11 +70,13 @@ class oauth_access_token_authenticator implements authenticator_interface {
             throw new mcp_exception(mcp_exception::AUTH_REQUIRED, 'error:authrequired');
         }
 
+        // Positional, not named, arguments: named arguments are PHP 8.0 only
+        // and this plugin still supports PHP 7.4, the floor Moodle 4.1 allows.
         return new authenticated_principal(
-            userid: (int) $record->userid,
-            scope: (string) $record->scope,
-            credentialtype: 'oauth_access_token',
-            credentialid: (int) $record->id
+            (int) $record->userid,
+            (string) $record->scope,
+            'oauth_access_token',
+            (int) $record->id
         );
     }
 }

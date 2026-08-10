@@ -18,8 +18,6 @@ namespace local_simplemcp\auth;
 
 use local_simplemcp\local\mcp_exception;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Tries the OAuth access-token store first, then falls back to the
  * Milestone 2 POC bearer-token store. A bearer token presented while
@@ -32,6 +30,12 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class composite_authenticator implements authenticator_interface {
+    /**
+     * Verifies the incoming credential and resolves the learner behind it.
+     *
+     * @return authenticated_principal The verified caller.
+     * @throws \local_simplemcp\local\mcp_exception AUTH_REQUIRED when no usable credential is present.
+     */
     public function authenticate(): authenticated_principal {
         try {
             return (new oauth_access_token_authenticator())->authenticate();

@@ -46,9 +46,23 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\rate_limiter;
 use local_simplemcp\oauth\client_metadata_validator;
 
+// JSON only: debugging() and any stray notice would otherwise be echoed into
+// the response body ahead of the JSON, breaking the contract this endpoint
+// promises. Turning display off here keeps diagnostics going to the server
+// log (Moodle routes them there instead) without corrupting the response.
+$CFG->debugdisplay = 0;
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
+/**
+ * Emits an RFC 7591 registration error response and stops.
+ *
+ * @param int $httpstatus HTTP status code to send.
+ * @param string $error Registration error code, e.g. 'invalid_client_metadata'.
+ * @param string $description Optional human-readable detail.
+ * @return void Never returns; exits.
+ */
 function simplemcp_register_error(int $httpstatus, string $error, string $description = ''): void {
     http_response_code($httpstatus);
     echo json_encode(array_filter([

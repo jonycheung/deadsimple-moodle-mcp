@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Converts Moodle-stored lesson HTML into model-facing HTML.
  *
@@ -35,6 +33,9 @@ class content_formatter {
     /**
      * Cleans one mod_lesson page's content and rewrites embedded
      * pluginfile.php URLs to absolute, permission-checked URLs.
+     *
+     * @param stdClass $page The lesson page record.
+     * @param context $context The context the content belongs to.
      */
     public static function format_lesson_page(\stdClass $page, \context $context): string {
         return self::format_html($page->contents, $page->contentsformat, $context, 'mod_lesson', 'page_contents', $page->id);
@@ -44,8 +45,22 @@ class content_formatter {
      * Generic version of format_lesson_page() for any Moodle activity's
      * stored HTML — used by the mod_page and mod_book adapters, which have
      * their own component/filearea/itemid for embedded files.
+     *
+     * @param string $html Raw stored HTML.
+     * @param int $format Moodle text format constant for $html.
+     * @param context $context The context the content belongs to.
+     * @param string $component Frankenstyle component the files belong to.
+     * @param string $filearea File area within that component.
+     * @param int $itemid Item id within that file area.
      */
-    public static function format_html(string $html, int $format, \context $context, string $component, string $filearea, int $itemid): string {
+    public static function format_html(
+        string $html,
+        int $format,
+        \context $context,
+        string $component,
+        string $filearea,
+        int $itemid
+    ): string {
         $rewritten = file_rewrite_pluginfile_urls($html, 'pluginfile.php', $context->id, $component, $filearea, $itemid);
 
         return format_text($rewritten, $format, [
@@ -64,6 +79,8 @@ class content_formatter {
      * LLM client rather than a browser; a DOM-aware truncation pass is
      * recommended before this leaves POC status.
      *
+     * @param string $html Raw stored HTML.
+     * @param int $maxchars Character budget for the returned content.
      * @return array{text: string, truncated: bool, originalLength: int}
      */
     public static function truncate(string $html, int $maxchars): array {

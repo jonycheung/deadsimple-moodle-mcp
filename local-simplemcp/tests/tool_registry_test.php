@@ -21,9 +21,9 @@ use local_simplemcp\local\mcp_exception;
 use local_simplemcp\local\request_context;
 use local_simplemcp\local\tool_registry;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests the tool allowlist and its capability gate.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

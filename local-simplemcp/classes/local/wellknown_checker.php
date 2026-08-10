@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Live self-check that the site's reverse proxy correctly aliases the true
  * root-level `/.well-known/oauth-*` discovery paths to this plugin's own
@@ -120,6 +118,8 @@ class wellknown_checker {
     /**
      * Fetch /.well-known/oauth-authorization-server and confirm it resolves
      * to this plugin's own authorize.php, not a stale alias target.
+     *
+     * @param string $wwwroot The site's own root URL, with no trailing slash.
      */
     private static function check_authorization_server(string $wwwroot): array {
         $url = $wwwroot . '/.well-known/oauth-authorization-server';
@@ -150,6 +150,8 @@ class wellknown_checker {
     /**
      * Fetch /.well-known/oauth-protected-resource and confirm it resolves
      * to this plugin's own endpoint.php, not a stale alias target.
+     *
+     * @param string $wwwroot The site's own root URL, with no trailing slash.
      */
     private static function check_protected_resource(string $wwwroot): array {
         $url = $wwwroot . '/.well-known/oauth-protected-resource';
@@ -180,11 +182,20 @@ class wellknown_checker {
     /**
      * GET a URL with a short timeout.
      *
+     * @param string $url Absolute URL to request.
      * @return array{0: string, 1: ?string} [body, error]. Exactly one is
      *         meaningful — error is null on success.
      */
     private static function fetch(string $url): array {
-        $curl = new \curl();
+        // Bypassing the cURL security helper is safe, and necessary, here:
+        // the only URL this ever requests is the site's own $CFG->wwwroot,
+        // with no user-suppliable input, so there is nothing for the helper
+        // to protect against. Without it, any site whose wwwroot is a loopback
+        // or private address — every development install, and intranet
+        // deployments — has the request blocked, and the helper reports that
+        // through debugging(), which on a debug-display site renders an error
+        // straight into the settings page this check is supposed to inform.
+        $curl = new \curl(['ignoresecurity' => true]);
         $curl->setopt([
             'CURLOPT_TIMEOUT' => self::TIMEOUT,
             'CURLOPT_CONNECTTIMEOUT' => self::TIMEOUT,

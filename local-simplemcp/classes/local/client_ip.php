@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Resolves the real client IP behind Cloudflare (confirmed fronting proxy
  * for learn.online-bible-college.com — see docs/mcp-discovery.md §9).
@@ -30,6 +28,11 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class client_ip {
+    /**
+     * The client IP to attribute this request to.
+     *
+     * @return string
+     */
     public static function resolve(): string {
         foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR'] as $header) {
             if (!empty($_SERVER[$header])) {

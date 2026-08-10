@@ -20,23 +20,38 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\request_context;
 use local_simplemcp\service\progress_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * MCP tool: the next activity the learner has not yet completed in a course.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_next_lesson extends abstract_tool {
+    /**
+     * The tool name exposed over MCP. Must stay stable: clients bind to it.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return 'get_next_lesson';
     }
 
+    /**
+     * Model-facing description of what this tool does and how to cite it.
+     *
+     * @return string
+     */
     public function get_description(): string {
-        return 'Return the next ' . config::brand_name() . ' lesson currently available to the authenticated learner in a course, based on '
-            . 'their completion state. Never reveals a lesson that is hidden or restricted.';
+        return 'Return the next ' . config::brand_name() . ' lesson currently available to the authenticated learner '
+            . 'in a course, based on their completion state. Never reveals a lesson that is hidden or restricted.';
     }
 
+    /**
+     * JSON-schema-compatible description of this tool's arguments.
+     *
+     * @return array
+     */
     public function get_input_schema(): array {
         return [
             'type' => 'object',
@@ -48,10 +63,22 @@ class get_next_lesson extends abstract_tool {
         ];
     }
 
+    /**
+     * The capability a learner needs before this tool is offered or run.
+     *
+     * @return string|null Null means local/simplemcp:use alone is enough.
+     */
     public function get_capability(): ?string {
         return 'local/simplemcp:readownprogress';
     }
 
+    /**
+     * Runs the tool for the authenticated learner in $context.
+     *
+     * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context Carries the authenticated principal.
+     * @return array MCP tool result envelope.
+     */
     public function execute(array $arguments, request_context $context): array {
         $service = new progress_service();
         $next = $service->get_next_available_activity($context->principal->userid, $arguments['courseId']);

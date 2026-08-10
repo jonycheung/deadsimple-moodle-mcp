@@ -18,8 +18,6 @@ namespace local_simplemcp\local;
 
 use local_simplemcp\auth\authenticated_principal;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Routes a single parsed JSON-RPC request to the right handler and maps
  * any failure to a stable, client-safe JSON-RPC error. Never lets a raw
@@ -31,7 +29,10 @@ defined('MOODLE_INTERNAL') || die();
  */
 class dispatcher {
     /**
+     * Handles one parsed JSON-RPC request and returns its response.
+     *
      * @param mixed $payload Decoded JSON body (already confirmed to be an array).
+     * @param authenticated_principal $principal The verified caller.
      * @return array|null The JSON-RPC response, or null for notifications
      *         (no response body should be sent).
      */
@@ -66,18 +67,7 @@ class dispatcher {
         } catch (mcp_exception $e) {
             return $isnotification ? null : jsonrpc::error($id, $e->get_rpc_code(), $e->getMessage());
         } catch (\Throwable $e) {
-            // error_log() bypasses Moodle's debugging() level/display gate
-            // entirely, so this is captured regardless of site debug
-            // settings - debugging() alone was proving unreliable to
-            // observe during this rollout.
-            error_log(sprintf(
-                'local_simplemcp dispatcher error: %s: %s in %s:%d',
-                get_class($e),
-                $e->getMessage(),
-                $e->getFile(),
-                $e->getLine()
-            ));
-            debugging('local_simplemcp dispatcher error: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            logger::exception('dispatcher', $e);
             return $isnotification ? null
                 : jsonrpc::error($id, mcp_exception::INTERNAL_ERROR, get_string('error:internalerror', 'local_simplemcp'));
         }
@@ -85,6 +75,15 @@ class dispatcher {
         return $isnotification ? null : jsonrpc::result($id, $result);
     }
 
+    /**
+     * Maps one JSON-RPC method name to its handler.
+     *
+     * @param string $method The JSON-RPC method being called.
+     * @param array $params Method parameters as sent by the client.
+     * @param request_context $context Carries the authenticated principal.
+     * @return mixed The method result, ready to wrap in a JSON-RPC response.
+     * @throws mcp_exception METHOD_NOT_FOUND for anything not handled here.
+     */
     private function route(string $method, array $params, request_context $context) {
         switch ($method) {
             case 'initialize':
@@ -100,6 +99,11 @@ class dispatcher {
         }
     }
 
+    /**
+     * Answers the MCP handshake with this server's identity and capabilities.
+     *
+     * @return array
+     */
     private function handle_initialize(): array {
         return [
             'protocolVersion' => config::protocol_version(),
@@ -108,11 +112,17 @@ class dispatcher {
             ],
             'serverInfo' => [
                 'name' => config::server_name(),
-                'version' => '0.1.0',
+                'version' => config::plugin_version(),
             ],
         ];
     }
 
+    /**
+     * Lists the tools this particular learner is permitted to call.
+     *
+     * @param request_context $context Carries the authenticated principal.
+     * @return array
+     */
     private function handle_tools_list(request_context $context): array {
         $tools = tool_registry::list_available($context);
 
@@ -125,6 +135,14 @@ class dispatcher {
         ];
     }
 
+    /**
+     * Validates, rate-limits, runs and audits a single tool call.
+     *
+     * @param array $params JSON-RPC params, expected to carry name and arguments.
+     * @param request_context $context Carries the authenticated principal.
+     * @return array MCP tool result envelope.
+     * @throws mcp_exception On unknown tool, denied capability, bad arguments or rate limiting.
+     */
     private function handle_tools_call(array $params, request_context $context): array {
         $name = $params['name'] ?? null;
         if (!is_string($name) || $name === '') {

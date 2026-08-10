@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\auth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * The authenticated learner a request is acting as, plus the scope and
  * credential identity used to authenticate. Tools must only ever read the
@@ -28,14 +26,47 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class authenticated_principal {
+    /** @var int Moodle user id this request acts as. */
+    public int $userid;
+
+    /** @var string The single scope the credential carries. */
+    public string $scope;
+
+    /** @var string Which credential store verified this: bearer_token or oauth_access_token. */
+    public string $credentialtype;
+
+    /** @var int|null Row id within that credential store, for auditing. */
+    public ?int $credentialid;
+
+    /**
+     * Records who a verified request is acting as.
+     *
+     * Written as plain assignments rather than constructor property promotion
+     * so the plugin still parses on PHP 7.4, which Moodle 4.1 supports.
+     *
+     * @param int $userid Moodle user id this request acts as.
+     * @param string $scope The single scope the credential carries.
+     * @param string $credentialtype Which credential store verified this: bearer_token or oauth_access_token.
+     * @param int|null $credentialid Row id within that credential store, for auditing.
+     */
     public function __construct(
-        public int $userid,
-        public string $scope,
-        public string $credentialtype,
-        public ?int $credentialid = null
+        int $userid,
+        string $scope,
+        string $credentialtype,
+        ?int $credentialid = null
     ) {
+        $this->userid = $userid;
+        $this->scope = $scope;
+        $this->credentialtype = $credentialtype;
+        $this->credentialid = $credentialid;
     }
 
+    /**
+     * Whether this principal carries the given scope.
+     *
+     * @param string $scope The scope to check for.
+     * @return bool
+     */
     public function has_scope(string $scope): bool {
         return $this->scope === $scope;
     }

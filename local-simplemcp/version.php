@@ -27,5 +27,6 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'local_simplemcp';
 $plugin->version   = 2026081002;
 $plugin->requires  = 2022112800; // Moodle 4.1.
+$plugin->supported = [401, 500];  // Tested against Moodle 4.1 LTS through 5.0.
 $plugin->maturity  = MATURITY_ALPHA; // Proof of concept.
 $plugin->release   = '0.1.0 (POC)';

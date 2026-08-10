@@ -19,8 +19,6 @@ namespace local_simplemcp\service;
 use local_simplemcp\local\access_guard;
 use local_simplemcp\local\config;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Read-only course completion progress and "next available lesson"
  * lookup, both driven entirely by Moodle's own completion_info API
@@ -43,6 +41,10 @@ defined('MOODLE_INTERNAL') || die();
  */
 class progress_service {
     /**
+     * Summarises a learner's own completion progress in one course.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param int $courseid Course id to operate on.
      * @return array{completionEnabled: bool, progressPercent: ?int, completedCount: int, totalCount: int}
      */
     public function get_course_progress(int $userid, int $courseid): array {
@@ -86,6 +88,10 @@ class progress_service {
     }
 
     /**
+     * Finds the next activity the learner has not completed yet.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param int $courseid Course id to operate on.
      * @return array{found: bool, lesson: ?array, reason: ?string}
      */
     public function get_next_available_activity(int $userid, int $courseid): array {
@@ -149,6 +155,12 @@ class progress_service {
         ];
     }
 
+    /**
+     * Whether a Moodle completion state counts as done.
+     *
+     * @param int $completionstate One of the COMPLETION_* constants.
+     * @return bool
+     */
     private function is_complete(int $completionstate): bool {
         return in_array($completionstate, [COMPLETION_COMPLETE, COMPLETION_COMPLETE_PASS], true);
     }

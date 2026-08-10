@@ -77,7 +77,7 @@ if ($revokeid && confirm_sesskey()) {
         ['clientid' => $client->id]
     );
 
-    redirect($pageurl, 'All active tokens for "' . format_string($client->name) . '" have been revoked.');
+    redirect($pageurl, get_string('admin:tokensrevoked', 'local_simplemcp', format_string($client->name)));
 }
 
 if ($revokegrantid && confirm_sesskey()) {
@@ -100,7 +100,7 @@ if ($revokegrantid && confirm_sesskey()) {
         ['clientid' => $grant->clientid, 'userid' => $grant->userid]
     );
 
-    redirect($pageurl, 'Connection revoked.');
+    redirect($pageurl, get_string('admin:connectionrevoked', 'local_simplemcp'));
 }
 
 if ($deleteid && confirm_sesskey()) {
@@ -109,10 +109,10 @@ if ($deleteid && confirm_sesskey()) {
     if (!$confirm) {
         echo $OUTPUT->header();
         echo $OUTPUT->confirm(
-            'Delete client "' . format_string($client->name) . '" (' . s($client->clientid) . ')? '
-                . 'This permanently removes the client registration and every authorisation code, '
-                . 'access token, refresh token and grant associated with it, for every learner. '
-                . 'This cannot be undone.',
+            get_string('admin:deleteconfirm', 'local_simplemcp', [
+                'name' => format_string($client->name),
+                'clientid' => s($client->clientid),
+            ]),
             new moodle_url($pageurl, ['delete' => $client->id, 'confirm' => 1, 'sesskey' => sesskey()]),
             $pageurl
         );
@@ -126,22 +126,24 @@ if ($deleteid && confirm_sesskey()) {
     $DB->delete_records('local_simplemcp_grant', ['clientid' => $client->id]);
     $DB->delete_records('local_simplemcp_client', ['id' => $client->id]);
 
-    redirect($pageurl, 'Client "' . format_string($client->name) . '" deleted.');
+    redirect($pageurl, get_string('admin:clientdeleted', 'local_simplemcp', format_string($client->name)));
 }
 
 $clients = $DB->get_records('local_simplemcp_client', null, 'timecreated DESC');
-$namefields = get_all_user_name_fields(true, 'u');
+// The core_user\fields API replaces get_all_user_name_fields(), which was deprecated
+// in Moodle 3.11 and removed in 4.3 — calling it is a fatal error on any
+// supported version above 4.2.
+$namefields = \core_user\fields::for_name()->get_sql('u')->selects;
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading('Simple MCP OAuth clients');
+echo $OUTPUT->heading(get_string('admin:clientsheading', 'local_simplemcp'));
 
 if (!simplemcpconfig::oauth_enabled()) {
-    echo $OUTPUT->notification('OAuth is currently disabled ("Enable OAuth" in plugin settings) — '
-        . 'existing clients are listed below but cannot be used to authorise until it is re-enabled.', 'warning');
+    echo $OUTPUT->notification(get_string('admin:oauthdisabled', 'local_simplemcp'), 'warning');
 }
 
 if (empty($clients)) {
-    echo $OUTPUT->notification('No OAuth clients are registered yet.', 'info');
+    echo $OUTPUT->notification(get_string('admin:noclients', 'local_simplemcp'), 'info');
 }
 
 foreach ($clients as $client) {
@@ -157,7 +159,7 @@ foreach ($clients as $client) {
     );
 
     $grants = $DB->get_records_sql(
-        "SELECT g.id, g.userid, g.timecreated, g.timelastused, $namefields, u.deleted, u.suspended
+        "SELECT g.id, g.userid, g.timecreated, g.timelastused, u.deleted, u.suspended $namefields
            FROM {local_simplemcp_grant} g
            JOIN {user} u ON u.id = g.userid
           WHERE g.clientid = :clientid AND g.timerevoked IS NULL
@@ -175,44 +177,65 @@ foreach ($clients as $client) {
     echo html_writer::tag(
         'h5',
         format_string($client->name)
-        . ' ' . ($client->enabled
-            ? '<span class="badge badge-success">Enabled</span>'
-            : '<span class="badge badge-secondary">Disabled</span>'),
+        . ' ' . html_writer::span(
+            $client->enabled
+                ? get_string('admin:enabled', 'local_simplemcp')
+                : get_string('admin:disabled', 'local_simplemcp'),
+            'badge ' . ($client->enabled ? 'badge-success' : 'badge-secondary')
+        ),
         ['class' => 'card-title']
     );
 
     echo html_writer::tag(
         'p',
-        'Client ID: <code>' . s($client->clientid) . '</code>'
-        . ' · Type: ' . s($client->clienttype)
-        . ' · Source: ' . s($client->registrationsource)
-        . ' · Registered: ' . userdate($client->timecreated)
-        . ' · Active tokens: ' . $activeaccess . ' access, ' . $activerefresh . ' refresh',
+        get_string('admin:clientmeta', 'local_simplemcp', [
+            'clientid' => html_writer::tag('code', s($client->clientid)),
+            'type' => s($client->clienttype),
+            'source' => s($client->registrationsource),
+            'registered' => userdate($client->timecreated),
+            'access' => $activeaccess,
+            'refresh' => $activerefresh,
+        ]),
         ['class' => 'card-text text-muted']
     );
 
     echo html_writer::link(
         $toggleurl,
-        $client->enabled ? 'Disable' : 'Enable',
+        $client->enabled
+            ? get_string('admin:disable', 'local_simplemcp')
+            : get_string('admin:enable', 'local_simplemcp'),
         ['class' => 'btn btn-secondary btn-sm mr-1']
     );
     if (!empty($grants) || $activeaccess || $activerefresh) {
-        echo html_writer::link($revokeurl, 'Revoke all tokens', ['class' => 'btn btn-warning btn-sm mr-1']);
+        echo html_writer::link(
+            $revokeurl,
+            get_string('admin:revokeall', 'local_simplemcp'),
+            ['class' => 'btn btn-warning btn-sm mr-1']
+        );
     }
-    echo html_writer::link($deleteurl, 'Delete', ['class' => 'btn btn-danger btn-sm']);
+    echo html_writer::link(
+        $deleteurl,
+        get_string('admin:delete', 'local_simplemcp'),
+        ['class' => 'btn btn-danger btn-sm']
+    );
 
     if (!empty($grants)) {
         $learnertable = new html_table();
-        $learnertable->head = ['Learner', 'Connected', 'Last used', ''];
+        $learnertable->head = [
+            get_string('admin:collearner', 'local_simplemcp'),
+            get_string('profile:colconnected', 'local_simplemcp'),
+            get_string('profile:collastused', 'local_simplemcp'),
+            '',
+        ];
         $learnertable->data = [];
 
         foreach ($grants as $grant) {
             $profileurl = new moodle_url('/user/profile.php', ['id' => $grant->userid]);
             $name = fullname($grant);
             if ($grant->deleted) {
-                $name .= ' (deleted account)';
+                $name .= ' ' . get_string('admin:deletedaccount', 'local_simplemcp');
             } else if ($grant->suspended) {
-                $name .= ' (suspended)';
+                $name .= ' ' . get_string('admin:suspendedaccount', 'local_simplemcp');
             }
 
             $revokegranturl = new moodle_url($pageurl, ['revokegrant' => $grant->id, 'sesskey' => sesskey()]);
@@ -220,8 +243,14 @@ foreach ($clients as $client) {
             $learnertable->data[] = [
                 $grant->deleted ? s($name) : html_writer::link($profileurl, $name),
                 userdate($grant->timecreated),
-                $grant->timelastused ? userdate($grant->timelastused) : 'never',
-                html_writer::link($revokegranturl, 'Revoke', ['class' => 'btn btn-outline-danger btn-sm']),
+                $grant->timelastused
+                    ? userdate($grant->timelastused)
+                    : get_string('manage:never', 'local_simplemcp'),
+                html_writer::link(
+                    $revokegranturl,
+                    get_string('admin:revoke', 'local_simplemcp'),
+                    ['class' => 'btn btn-outline-danger btn-sm']
+                ),
             ];
         }
 

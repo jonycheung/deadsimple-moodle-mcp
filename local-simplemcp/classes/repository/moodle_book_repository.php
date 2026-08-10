@@ -19,8 +19,6 @@ namespace local_simplemcp\repository;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\content_formatter;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Reads mod_book content. Chapters (book_chapters, ordered by pagenum) map
  * directly onto sectionId — a better natural fit for this model than
@@ -37,6 +35,15 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodle_book_repository implements lesson_repository_interface {
+    /**
+     * Reads one whole activity as linear text for the learner.
+     *
+     * @param \cm_info $cm The course module to read.
+     * @param int $userid The learner the request is acting as.
+     * @param int $maxchars Character budget for the returned content.
+     * @return array Content payload, including whether it was truncated.
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE if the content cannot be served.
+     */
     public function get_lesson(\cm_info $cm, int $userid, int $maxchars): array {
         $book = $this->load_book($cm);
         $chapters = $this->visible_chapters((int) $book->id);
@@ -54,7 +61,14 @@ class moodle_book_repository implements lesson_repository_interface {
                 'id' => (string) $chapter->id,
                 'heading' => $chapter->title !== '' ? format_string($chapter->title, true, ['context' => $context]) : null,
             ];
-            $html .= content_formatter::format_html($chapter->content, $chapter->contentformat, $context, 'mod_book', 'chapter', $chapter->id);
+            $html .= content_formatter::format_html(
+                $chapter->content,
+                $chapter->contentformat,
+                $context,
+                'mod_book',
+                'chapter',
+                $chapter->id
+            );
         }
 
         $truncated = content_formatter::truncate($html, $maxchars);
@@ -68,6 +82,15 @@ class moodle_book_repository implements lesson_repository_interface {
         ];
     }
 
+    /**
+     * Reads one addressable section of an activity.
+     *
+     * @param \cm_info $cm The course module to read.
+     * @param string $sectionid Section identifier as returned by get_lesson().
+     * @param int $userid The learner the request is acting as.
+     * @return array Content payload for that section alone.
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE if no such readable section exists.
+     */
     public function get_section(\cm_info $cm, string $sectionid, int $userid): array {
         global $DB;
 
@@ -82,16 +105,32 @@ class moodle_book_repository implements lesson_repository_interface {
         return [
             'id' => (string) $chapter->id,
             'heading' => $chapter->title !== '' ? format_string($chapter->title, true, ['context' => $context]) : null,
-            'content' => content_formatter::format_html($chapter->content, $chapter->contentformat, $context, 'mod_book', 'chapter', $chapter->id),
+            'content' => content_formatter::format_html(
+                $chapter->content,
+                $chapter->contentformat,
+                $context,
+                'mod_book',
+                'chapter',
+                $chapter->id
+            ),
         ];
     }
 
+    /**
+     * Loads the mod_book instance row behind a course module.
+     *
+     * @param \cm_info $cm The course module to load.
+     * @return \stdClass The activity instance record.
+     */
     private function load_book(\cm_info $cm): \stdClass {
         global $DB;
         return $DB->get_record('book', ['id' => $cm->instance], '*', MUST_EXIST);
     }
 
     /**
+     * Chapters a learner may read, flattened into reading order.
+     *
+     * @param int $bookid The book instance to read chapters from.
      * @return \stdClass[] Non-hidden chapters, in reading order.
      */
     private function visible_chapters(int $bookid): array {

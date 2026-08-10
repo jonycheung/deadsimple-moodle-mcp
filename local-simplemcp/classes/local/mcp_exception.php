@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * A JSON-RPC error carrying a stable, client-safe error code and message.
  *
@@ -33,21 +31,59 @@ class mcp_exception extends \moodle_exception {
     /** @var int */
     protected $rpccode;
 
-    const PARSE_ERROR = -32700;
-    const INVALID_REQUEST = -32600;
-    const METHOD_NOT_FOUND = -32601;
-    const INVALID_PARAMS = -32602;
-    const INTERNAL_ERROR = -32603;
-    const AUTH_REQUIRED = -32001;
-    const PERMISSION_DENIED = -32003;
-    const RATE_LIMITED = -32029;
-    const CONTENT_UNAVAILABLE = -32040;
+    /**
+     * @var int Request body was not valid JSON.
+     */
+    public const PARSE_ERROR = -32700;
+    /**
+     * @var int Request was not a valid JSON-RPC 2.0 request.
+     */
+    public const INVALID_REQUEST = -32600;
+    /**
+     * @var int No such JSON-RPC method or MCP tool.
+     */
+    public const METHOD_NOT_FOUND = -32601;
+    /**
+     * @var int Parameters failed schema validation.
+     */
+    public const INVALID_PARAMS = -32602;
+    /**
+     * @var int Unexpected server-side failure; details never reach the client.
+     */
+    public const INTERNAL_ERROR = -32603;
+    /**
+     * @var int No usable credential was presented.
+     */
+    public const AUTH_REQUIRED = -32001;
+    /**
+     * @var int Authenticated, but not permitted to do this.
+     */
+    public const PERMISSION_DENIED = -32003;
+    /**
+     * @var int Too many calls in the current minute.
+     */
+    public const RATE_LIMITED = -32029;
+    /**
+     * @var int Content exists but cannot be served to this learner.
+     */
+    public const CONTENT_UNAVAILABLE = -32040;
 
+    /**
+     * Builds an exception whose message is a client-safe language string.
+     *
+     * @param int $rpccode One of this class's JSON-RPC error code constants.
+     * @param string $errorcodestringidentifier local_simplemcp language string key for the message.
+     */
     public function __construct(int $rpccode, string $errorcodestringidentifier) {
         $this->rpccode = $rpccode;
         parent::__construct($errorcodestringidentifier, 'local_simplemcp');
     }
 
+    /**
+     * The JSON-RPC error code to report for this failure.
+     *
+     * @return int
+     */
     public function get_rpc_code(): int {
         return $this->rpccode;
     }

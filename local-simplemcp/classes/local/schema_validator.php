@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Minimal JSON-schema-subset validator for MCP tool input. Deliberately
  * small: this plugin's tool schemas only use object/string/integer/boolean
@@ -34,6 +32,8 @@ class schema_validator {
      * Validates $arguments against $schema, applying declared defaults for
      * missing optional properties.
      *
+     * @param array $schema The tool's declared input schema.
+     * @param array $arguments Raw arguments as sent by the client.
      * @return array Validated arguments, with defaults applied.
      * @throws mcp_exception with INVALID_PARAMS on any violation.
      */
@@ -66,6 +66,14 @@ class schema_validator {
         return $result;
     }
 
+    /**
+     * Validates and coerces one argument against its schema rule.
+     *
+     * @param array $rule The property's schema fragment.
+     * @param mixed $value The raw client-supplied value.
+     * @return mixed The value, coerced to the declared type.
+     * @throws mcp_exception INVALID_PARAMS if the value does not match the rule.
+     */
     private static function validate_value(array $rule, $value) {
         $type = $rule['type'] ?? null;
 

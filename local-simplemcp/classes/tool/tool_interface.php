@@ -18,24 +18,38 @@ namespace local_simplemcp\tool;
 
 use local_simplemcp\local\request_context;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * One MCP tool: its identity, its argument schema, and how to run it.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 interface tool_interface {
+    /**
+     * The tool name exposed over MCP. Must stay stable: clients bind to it.
+     *
+     * @return string
+     */
     public function get_name(): string;
 
+    /**
+     * Model-facing description of what this tool does and how to cite it.
+     *
+     * @return string
+     */
     public function get_description(): string;
 
     /**
+     * Describes this tool's arguments to the MCP client.
+     *
      * @return array JSON-schema-compatible input schema.
      */
     public function get_input_schema(): array;
 
     /**
+     * The capability a learner needs before this tool is offered or run.
+     *
      * The capability required to call this tool, checked in system context
      * in addition to any per-course/per-activity checks the tool itself
      * performs. Null means no capability beyond local/simplemcp:use.
@@ -43,6 +57,9 @@ interface tool_interface {
     public function get_capability(): ?string;
 
     /**
+     * Checks raw client arguments against this tool's input schema.
+     *
+     * @param array $arguments Raw arguments as sent by the client.
      * @throws \local_simplemcp\local\mcp_exception with INVALID_PARAMS on any
      *         schema violation.
      * @return array Validated arguments, with declared defaults applied.
@@ -50,7 +67,10 @@ interface tool_interface {
     public function validate_arguments(array $arguments): array;
 
     /**
+     * Runs the tool for the authenticated learner in $context.
+     *
      * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context The context the content belongs to.
      * @return array MCP tool result: ['content' => [...], 'structuredContent' => [...], 'isError' => bool]
      */
     public function execute(array $arguments, request_context $context): array;

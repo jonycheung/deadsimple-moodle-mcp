@@ -20,18 +20,28 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\request_context;
 use local_simplemcp\service\lesson_content_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * MCP tool: the full readable text of one lesson available to the learner.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_lesson_content extends abstract_tool {
+    /**
+     * The tool name exposed over MCP. Must stay stable: clients bind to it.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return 'get_lesson_content';
     }
 
+    /**
+     * Model-facing description of what this tool does and how to cite it.
+     *
+     * @return string
+     */
     public function get_description(): string {
         return 'Retrieve a ' . config::brand_name() . ' lesson the authenticated learner is currently authorised to access. '
             . config::brand_name() . ' course content is the authoritative source for statements described as "'
@@ -40,6 +50,11 @@ class get_lesson_content extends abstract_tool {
             . 'it from your own broader explanation. Hidden, locked, or unavailable lessons will not be returned.';
     }
 
+    /**
+     * JSON-schema-compatible description of this tool's arguments.
+     *
+     * @return array
+     */
     public function get_input_schema(): array {
         $maxchars = config::max_content_chars();
         return [
@@ -58,10 +73,22 @@ class get_lesson_content extends abstract_tool {
         ];
     }
 
+    /**
+     * The capability a learner needs before this tool is offered or run.
+     *
+     * @return string|null Null means local/simplemcp:use alone is enough.
+     */
     public function get_capability(): ?string {
         return 'local/simplemcp:readavailablecontent';
     }
 
+    /**
+     * Runs the tool for the authenticated learner in $context.
+     *
+     * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context Carries the authenticated principal.
+     * @return array MCP tool result envelope.
+     */
     public function execute(array $arguments, request_context $context): array {
         $service = new lesson_content_service();
         $result = $service->get_lesson(

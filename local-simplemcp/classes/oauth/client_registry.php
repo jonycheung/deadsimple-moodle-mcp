@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\oauth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * OAuth clients: registered either by an admin via
  * cli/register_oauth_client.php, or dynamically by the client itself via
@@ -29,6 +27,12 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class client_registry {
+    /**
+     * Finds an enabled client by its public client_id.
+     *
+     * @param string $clientid The client_id presented by the client.
+     * @return \stdClass|null The client record, or null if unknown or disabled.
+     */
     public function find_by_clientid(string $clientid): ?\stdClass {
         global $DB;
         $client = $DB->get_record('local_simplemcp_client', ['clientid' => $clientid, 'enabled' => 1]);
@@ -38,6 +42,9 @@ class client_registry {
     /**
      * Exact string match only — no wildcard/prefix matching, per the plan's
      * "strict redirect-URI validation" requirement.
+     *
+     * @param stdClass $client The client record to check against.
+     * @param string $redirecturi Redirect URI the code was issued against.
      */
     public function is_redirect_uri_allowed(\stdClass $client, string $redirecturi): bool {
         $allowed = json_decode($client->redirecturis, true);
@@ -47,6 +54,13 @@ class client_registry {
         return in_array($redirecturi, $allowed, true);
     }
 
+    /**
+     * Checks a confidential client's secret, in constant time.
+     *
+     * @param \stdClass $client The client record to check against.
+     * @param string|null $secret The raw secret presented by the client.
+     * @return bool True for a public client, which authenticates by PKCE alone.
+     */
     public function verify_secret(\stdClass $client, ?string $secret): bool {
         if ($client->clienttype !== 'confidential') {
             // Public clients (PKCE-only) authenticate via the code_verifier,

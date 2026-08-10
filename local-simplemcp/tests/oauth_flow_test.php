@@ -22,9 +22,9 @@ use local_simplemcp\oauth\client_registry;
 use local_simplemcp\oauth\pkce;
 use local_simplemcp\oauth\token_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests the OAuth 2.1 + PKCE authorisation, token and rotation flows.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -35,14 +35,32 @@ defined('MOODLE_INTERNAL') || die();
  * @covers     \local_simplemcp\oauth\client_metadata_validator
  */
 final class oauth_flow_test extends \advanced_testcase {
+    /**
+     * Generates a random PKCE code verifier.
+     *
+     * @return string
+     */
     private function make_verifier(): string {
         return rtrim(strtr(base64_encode(random_bytes(40)), '+/', '-_'), '=');
     }
 
+    /**
+     * Derives the S256 code challenge for a verifier.
+     *
+     * @param string $verifier The PKCE code verifier.
+     * @return string
+     */
     private function challenge_for(string $verifier): string {
         return rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
     }
 
+    /**
+     * Registers an OAuth client directly in the database.
+     *
+     * @param string $type Either 'public' or 'confidential'.
+     * @param string|null $secret Raw secret for a confidential client.
+     * @return \stdClass The client record.
+     */
     private function register_client(string $type = 'public', ?string $secret = null): \stdClass {
         global $DB;
         $record = new \stdClass();

@@ -1,0 +1,59 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_simplemcp/connectedapps
+
+    A learner's own list of connected MCP clients, each with a revoke link.
+
+    Context variables required for this template:
+    * instructionsurl - Link to the "how to connect" page.
+    * instructionslabel - Link text for that page.
+    * emptymessage - Shown when the learner has no connected apps.
+    * apps - Array of {name, meta, revokeurl, revokelabel}. Empty when none.
+
+    Example context (json):
+    {
+        "instructionsurl": "https://moodle.example.com/local/simplemcp/oauth/instructions.php",
+        "instructionslabel": "Need to connect a new app? See the instructions.",
+        "emptymessage": "No apps are currently connected to your Example College account.",
+        "apps": [
+            {
+                "name": "ChatGPT",
+                "meta": "Connected: 1 March 2026 · Last used: 2 March 2026",
+                "revokeurl": "https://moodle.example.com/local/simplemcp/oauth/manage.php?revoke=1&sesskey=abc",
+                "revokelabel": "Revoke access"
+            }
+        ]
+    }
+}}
+<div class="box generalbox local-simplemcp-connectedapps">
+    <p><a href="{{instructionsurl}}">{{instructionslabel}}</a></p>
+
+    {{^apps}}
+        <p>{{emptymessage}}</p>
+    {{/apps}}
+
+    {{#apps}}
+        <div class="card mb-2">
+            <div class="card-body">
+                <h5 class="card-title">{{name}}</h5>
+                <p class="card-text">{{meta}}</p>
+                <a href="{{revokeurl}}" class="btn btn-secondary btn-sm">{{revokelabel}}</a>
+            </div>
+        </div>
+    {{/apps}}
+</div>

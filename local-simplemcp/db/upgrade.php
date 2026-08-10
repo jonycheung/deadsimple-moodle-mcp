@@ -22,9 +22,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Runs the schema changes needed to reach this plugin's current version.
+ *
  * @param int $oldversion
  * @return bool
  */
@@ -34,7 +34,7 @@ function xmldb_local_simplemcp_upgrade($oldversion) {
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2026080300) {
-        // local_simplemcp_audit.tokenid was originally a single-table foreign
+        // The local_simplemcp_audit.tokenid column was originally a single-table foreign
         // key to local_simplemcp_token. OAuth introduces a second credential
         // table (local_simplemcp_access) whose ids can also land in tokenid,
         // making a single-table FK incorrect - drop it and add a

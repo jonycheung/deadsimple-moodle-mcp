@@ -18,8 +18,6 @@ namespace local_simplemcp\local;
 
 use local_simplemcp\tool\tool_interface;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Explicit allowlist of MCP tools. Deliberately not a generic
  * "call any method" dispatcher — every tool exposed here is enumerated
@@ -31,6 +29,9 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class tool_registry {
+    /**
+     * @var string[] Every tool class this server will ever expose.
+     */
     private const TOOL_CLASSES = [
         \local_simplemcp\tool\get_my_courses::class,
         \local_simplemcp\tool\get_course_outline::class,
@@ -42,6 +43,9 @@ class tool_registry {
     ];
 
     /**
+     * Lists the tools this learner is permitted to see.
+     *
+     * @param request_context $context The context the content belongs to.
      * @return tool_interface[] Tools the current principal is permitted to see.
      */
     public static function list_available(request_context $context): array {
@@ -56,6 +60,10 @@ class tool_registry {
     }
 
     /**
+     * Resolves one tool by name, enforcing its capability requirement.
+     *
+     * @param string $name The tool name requested by the client.
+     * @param request_context $context The context the content belongs to.
      * @throws mcp_exception METHOD_NOT_FOUND if no such tool exists,
      *         PERMISSION_DENIED if it exists but the principal lacks the
      *         required capability.
@@ -73,6 +81,13 @@ class tool_registry {
         throw new mcp_exception(mcp_exception::METHOD_NOT_FOUND, 'error:methodnotfound');
     }
 
+    /**
+     * Whether this learner holds every capability the tool requires.
+     *
+     * @param tool_interface $tool The tool being considered.
+     * @param request_context $context Carries the authenticated principal.
+     * @return bool
+     */
     private static function is_permitted(tool_interface $tool, request_context $context): bool {
         $syscontext = \context_system::instance();
         $userid = $context->principal->userid;

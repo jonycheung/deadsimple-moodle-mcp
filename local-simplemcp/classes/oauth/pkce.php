@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\oauth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * RFC 7636 PKCE (S256 only — plain is never accepted).
  *
@@ -26,13 +24,22 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class pkce {
+    /**
+     * Whether a code_challenge_method is one this server accepts.
+     *
+     * @param string $method The requested code_challenge_method.
+     * @return bool
+     */
     public static function is_supported_method(string $method): bool {
         return $method === 'S256';
     }
 
     /**
+     * Checks a PKCE verifier against the challenge recorded at authorisation time.
+     *
      * @param string $verifier The code_verifier presented at the token endpoint.
      * @param string $challenge The code_challenge stored from the authorize request.
+     * @param string $method The code challenge method, e.g. S256.
      */
     public static function verify(string $verifier, string $challenge, string $method): bool {
         if (!self::is_supported_method($method)) {

@@ -6,9 +6,16 @@ authenticated OBC learner's own courses, progress and lesson content be read
 by an MCP client (ChatGPT, Claude Code, MCP Inspector) — never written to,
 and never another learner's data.
 
-Full requirements and phased rollout plan: `docs/mcp-poc-plan.md` (repo
-root). Live-server findings that shaped this implementation:
-`docs/mcp-discovery.md`.
+Repository-level documentation — how to run this locally, how it is tested,
+and how releases are cut — is in the [repo root README](../README.md) and
+[`dev/README.md`](../dev/README.md). Release notes are in
+[`CHANGELOG.md`](../CHANGELOG.md).
+
+> Comments in this plugin cite `docs/mcp-poc-plan.md` and
+> `docs/mcp-discovery.md` for the reasoning behind particular decisions.
+> Those are OBC's internal planning notes; they live in a separate repository
+> and are not distributed with the plugin. The citations are kept because they
+> record *why* a constraint exists, but nothing here depends on them.
 
 ## What's implemented (Milestones 2, 3 & 5)
 
@@ -30,8 +37,8 @@ root). Live-server findings that shaped this implementation:
 - Three content adapters, selected via `repository_factory` by the course
   module's type: `mod_lesson` (linear lessons only), `mod_page`, `mod_book`.
   Only `mod_lesson` is enabled by default (`enabledcontenttypes` setting) —
-  the only content type confirmed in use at OBC (`docs/mcp-discovery.md`
-  §2); enable Page/Book only if a course actually needs them.
+  the only content type confirmed in use at OBC; enable Page/Book only if a
+  course actually needs them.
 - Progress and "next lesson" driven entirely by Moodle's own
   `completion_info` API — never re-derived from other tables.
 - Content search is lexical only (`LIKE`-based, per the plan's Phase 7 scope)
@@ -199,6 +206,21 @@ rate-limited by IP. If this trade-off isn't acceptable for your rollout,
 untick **Enable dynamic client registration** and register clients via CLI
 only — `oauth/register.php` returns 404 when the setting is off.
 
+## Testing
+
+The fastest way to exercise this plugin is the repository's development
+environment, which builds a throwaway Moodle site with the plugin installed:
+
+```
+make up            # Moodle + this plugin, at http://localhost:8080
+make seed          # a course, a learner, and a bearer token
+make smoke         # every tool over real HTTP
+make oauth-smoke   # consent, PKCE, refresh rotation, revocation
+make check         # phpcs, phpdoc, mustache, validate, phpunit
+```
+
+See [`dev/README.md`](../dev/README.md) for the detail.
+
 ## Testing with MCP Inspector or Claude Code
 
 Point an MCP HTTP client at:
@@ -264,9 +286,9 @@ verified bearer token.
   pages, or unreachable pages. OBC's lessons are confirmed linear today; if
   that changes, this adapter needs branch-flattening logic before it will
   serve those lessons.
-- `moodle_page_repository`/`moodle_book_repository` (added for portability
-  to other Moodle sites, not because OBC currently uses either type — see
-  `docs/mcp-discovery.md` §2) are **untested against any real course** —
+- `moodle_page_repository`/`moodle_book_repository` (added for portability to
+  other Moodle sites, not because OBC currently uses either type) are
+  **untested against any real course** —
   only against PHPUnit fixtures built by directly inserting `page`/
   `book_chapters` rows, the same way the `mod_lesson` tests work. Treat
   these as unverified until exercised against real `mod_page`/`mod_book`
@@ -274,20 +296,8 @@ verified bearer token.
 - `moodle_book_repository` flattens subchapters into the same linear
   reading order as top-level chapters rather than building a nested
   outline — a documented simplification, not a bug.
-- PHPUnit tests are written (`tests/`) but **could not be executed** in the
-  environment this plugin was authored in — this repository has no Moodle
-  core checkout and no PHPUnit-capable CI job (see `docs/mcp-discovery.md`
-  §8). Run them on a real Moodle 4.1.2 install before trusting them as a
-  merge gate:
-  ```
-  php admin/tool/phpunit/cli/init.php   # once, if not already initialised
-  vendor/bin/phpunit --testsuite local_simplemcp_testsuite
-  ```
-- No coding-style check (`phpcs` / `moodle-plugin-ci`) has been run against
-  this code for the same reason — no tool available in this environment.
-  Milestone 2's tools *were* verified end-to-end against live staging data
-  after several real bugs surfaced there (see git history) — the same
-  verification hasn't yet been done for Milestone 3's three new tools.
+- `search_my_course_content` returns lexical (`LIKE`) matches only — see
+  below.
 - `search_my_course_content` is lexical (`LIKE`) search only, per the plan's
   Phase 7 scope — no relevance scoring beyond a fixed title > heading > body
   ordering, and no semantic/embedding search.
@@ -298,14 +308,11 @@ verified bearer token.
   "next lesson" (they're excluded, not miscounted, from that specific
   lookup; `get_course_progress`'s totals do still include every
   completion-tracked activity in the course, not just lessons).
-- **OAuth (Milestone 5), including dynamic client registration, has not
-  been tested against a real MCP client at all** — unlike Milestones 2/3,
-  none of `authorize.php`, `token.php`, `revoke.php`, `register.php`, or
-  the consent flow have been exercised against live staging yet. Given the
-  pattern established by earlier milestones (multiple real bugs surfaced
-  only once actually deployed), treat this as unverified code until it's
-  been driven through a real browser + token exchange, not just the
-  PHPUnit tests in `tests/oauth_flow_test.php`.
+- OAuth has been driven end to end by `dev/bin/oauth-smoke.sh` (consent
+  screen, PKCE, code exchange, refresh rotation, reuse detection,
+  revocation) but **not yet against a real ChatGPT or Claude connector**.
+  The protocol is verified; whether a specific client is happy with what
+  this server returns is not.
 - Refresh-token lifetime (30 days) and reuse-detection behaviour are POC
   defaults, not validated against any specific OBC/ChatGPT requirement.
 - `oauth/authorize.php`'s consent screen and `admin/clients.php` are

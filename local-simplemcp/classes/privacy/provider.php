@@ -24,8 +24,6 @@ use core_privacy\local\request\transform;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Privacy provider. All plugin data lives at system context (none of it is
  * tied to a single course), so this plugin does not export or delete
@@ -37,7 +35,10 @@ defined('MOODLE_INTERNAL') || die();
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
+class provider implements
+    \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\core_userlist_provider,
+    \core_privacy\local\request\plugin\provider {
     /** Tables keyed by name, with a userid column, holding per-learner data. */
     private const USER_TABLES = [
         'local_simplemcp_token',
@@ -48,6 +49,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         'local_simplemcp_grant',
     ];
 
+    /**
+     * Describes every piece of personal data this plugin stores.
+     *
+     * @param collection $collection The collection to add metadata to.
+     * @return collection
+     */
     public static function get_metadata(collection $collection): collection {
         $collection->add_database_table('local_simplemcp_token', [
             'userid' => 'privacy:metadata:local_simplemcp_token:userid',
@@ -85,6 +92,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         return $collection;
     }
 
+    /**
+     * Lists the contexts holding data for one user.
+     *
+     * @param int $userid The user to look up.
+     * @return contextlist
+     */
     public static function get_contexts_for_userid(int $userid): contextlist {
         $contextlist = new contextlist();
 
@@ -99,6 +112,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         return $contextlist;
     }
 
+    /**
+     * Lists the users holding data in one context.
+     *
+     * @param userlist $userlist The userlist to add matching users to.
+     * @return void
+     */
     public static function get_users_in_context(userlist $userlist): void {
         if ($userlist->get_context()->contextlevel !== CONTEXT_SYSTEM) {
             return;
@@ -109,6 +128,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         }
     }
 
+    /**
+     * Exports every stored row belonging to one user.
+     *
+     * @param approved_contextlist $contextlist The approved contexts to export from.
+     * @return void
+     */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
         $userid = $contextlist->get_user()->id;
@@ -146,6 +171,14 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
             ];
         }, array_values($grants));
 
+        $authcodes = $DB->get_records('local_simplemcp_authcode', ['userid' => $userid]);
+        $authcodedata = array_map(static fn ($c): array => [
+            'scope' => $c->scope,
+            'timecreated' => transform::datetime($c->timecreated),
+            'timeexpires' => transform::datetime($c->timeexpires),
+            'timeused' => $c->timeused ? transform::datetime($c->timeused) : null,
+        ], array_values($authcodes));
+
         $accesstokens = $DB->get_records('local_simplemcp_access', ['userid' => $userid]);
         $accesstokendata = array_map(static fn ($a): array => [
             'scope' => $a->scope,
@@ -169,12 +202,19 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
                 'tokens' => $tokendata,
                 'audit' => $auditdata,
                 'connectedApps' => $grantdata,
+                'oauthAuthorisationCodes' => $authcodedata,
                 'oauthAccessTokens' => $accesstokendata,
                 'oauthRefreshTokens' => $refreshtokendata,
             ]
         );
     }
 
+    /**
+     * Deletes every user's data in one context.
+     *
+     * @param \context $context The context being purged.
+     * @return void
+     */
     public static function delete_data_for_all_users_in_context(\context $context): void {
         if ($context->contextlevel !== CONTEXT_SYSTEM) {
             return;
@@ -185,6 +225,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         }
     }
 
+    /**
+     * Deletes one user's data across the approved contexts.
+     *
+     * @param approved_contextlist $contextlist The approved contexts to delete from.
+     * @return void
+     */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         if (!self::has_system_context($contextlist)) {
             return;
@@ -196,6 +242,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         }
     }
 
+    /**
+     * Deletes data for a set of users within one context.
+     *
+     * @param approved_userlist $userlist The approved users to delete data for.
+     * @return void
+     */
     public static function delete_data_for_users(approved_userlist $userlist): void {
         if ($userlist->get_context()->contextlevel !== CONTEXT_SYSTEM) {
             return;
@@ -208,6 +260,12 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
         }
     }
 
+    /**
+     * Whether the approved list includes the system context this plugin stores against.
+     *
+     * @param approved_contextlist $contextlist The approved contexts to inspect.
+     * @return bool
+     */
     private static function has_system_context(approved_contextlist $contextlist): bool {
         foreach ($contextlist->get_contexts() as $context) {
             if ($context->contextlevel === CONTEXT_SYSTEM) {

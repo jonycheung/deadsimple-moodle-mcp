@@ -18,8 +18,6 @@ namespace local_simplemcp\local;
 
 use local_simplemcp\auth\authenticated_principal;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Per-request state passed down to tools. Tools read the learner's userid
  * from here only — never from client-supplied arguments.
@@ -29,16 +27,40 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class request_context {
+    /**
+     * @var string Opaque id tying audit rows to one request.
+     */
     public string $correlationid;
+    /**
+     * @var float Unix timestamp with microseconds, taken at construction.
+     */
     public float $starttime;
 
-    public function __construct(
-        public authenticated_principal $principal
-    ) {
+    /**
+     * @var authenticated_principal The verified caller.
+     */
+    public authenticated_principal $principal;
+
+    /**
+     * Starts the clock for one MCP request.
+     *
+     * Written as a plain assignment rather than constructor property
+     * promotion so the plugin still parses on PHP 7.4, which Moodle 4.1
+     * supports.
+     *
+     * @param authenticated_principal $principal The verified caller.
+     */
+    public function __construct(authenticated_principal $principal) {
+        $this->principal = $principal;
         $this->correlationid = bin2hex(random_bytes(8));
         $this->starttime = microtime(true);
     }
 
+    /**
+     * Milliseconds elapsed since this request started.
+     *
+     * @return int
+     */
     public function duration_ms(): int {
         return (int) round((microtime(true) - $this->starttime) * 1000);
     }

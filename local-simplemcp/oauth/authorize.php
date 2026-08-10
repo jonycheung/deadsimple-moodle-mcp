@@ -40,26 +40,35 @@ use local_simplemcp\oauth\pkce;
  * record on success. On any failure involving an unverifiable redirect
  * URI, this must NOT redirect the browser anywhere (open-redirect
  * protection) — call simplemcp_fail_locally() instead of redirecting.
+ *
+ * @param array $params Raw request parameters, already cleaned by optional_param().
+ * @param client_registry $clients Registry used to resolve and validate the client.
+ * @return stdClass The matching local_simplemcp_client record.
  */
 function simplemcp_validate_request(array $params, client_registry $clients): stdClass {
     if (($params['response_type'] ?? '') !== 'code') {
-        simplemcp_fail_locally('Only response_type=code is supported.');
+        simplemcp_fail_locally(get_string('consent:err:responsetype', 'local_simplemcp'));
     }
 
     $clientid = $params['client_id'] ?? '';
     $client = $clients->find_by_clientid($clientid);
     if (!$client) {
-        simplemcp_fail_locally('Unknown or disabled client.');
+        simplemcp_fail_locally(get_string('consent:err:unknownclient', 'local_simplemcp'));
     }
 
     $redirecturi = $params['redirect_uri'] ?? '';
     if ($redirecturi === '' || !$clients->is_redirect_uri_allowed($client, $redirecturi)) {
         // The redirect URI itself is unverified — never redirect back to it.
-        simplemcp_fail_locally('Invalid redirect_uri for this client.');
+        simplemcp_fail_locally(get_string('consent:err:redirecturi', 'local_simplemcp'));
     }
 
     if (($params['code_challenge_method'] ?? '') !== 'S256' || empty($params['code_challenge'])) {
-        simplemcp_redirect_error($redirecturi, $params['state'] ?? null, 'invalid_request', 'PKCE S256 code_challenge is required.');
+        simplemcp_redirect_error(
+            $redirecturi,
+            $params['state'] ?? null,
+            'invalid_request',
+            get_string('consent:err:pkcerequired', 'local_simplemcp')
+        );
     }
 
     $expectedscope = simplemcpconfig::scope_name();
@@ -69,13 +78,22 @@ function simplemcp_validate_request(array $params, client_registry $clients): st
             $redirecturi,
             $params['state'] ?? null,
             'invalid_scope',
-            "Only the {$expectedscope} scope is supported."
+            get_string('consent:err:scope', 'local_simplemcp', $expectedscope)
         );
     }
 
     return $client;
 }
 
+/**
+ * Renders an error on this page and stops, without redirecting anywhere.
+ *
+ * Used whenever the redirect URI is missing or unverified: redirecting to an
+ * attacker-supplied URI would turn this endpoint into an open redirect.
+ *
+ * @param string $message Learner-facing message, already localised.
+ * @return void Never returns; exits.
+ */
 function simplemcp_fail_locally(string $message): void {
     global $OUTPUT, $PAGE;
     $PAGE->set_context(context_system::instance());
@@ -87,6 +105,15 @@ function simplemcp_fail_locally(string $message): void {
     exit;
 }
 
+/**
+ * Redirects back to a verified client redirect URI carrying an OAuth error.
+ *
+ * @param string $redirecturi Redirect URI already confirmed to belong to the client.
+ * @param string|null $state Opaque state value to echo back, if the client sent one.
+ * @param string $error OAuth error code, e.g. 'invalid_request'.
+ * @param string $description Human-readable error detail.
+ * @return void Never returns; redirects.
+ */
 function simplemcp_redirect_error(string $redirecturi, ?string $state, string $error, string $description): void {
     $url = new moodle_url($redirecturi, array_filter([
         'error' => $error,
@@ -128,7 +155,12 @@ if (data_submitted() && confirm_sesskey()) {
     $decision = required_param('simplemcp_decision', PARAM_ALPHA);
 
     if ($decision !== 'allow') {
-        simplemcp_redirect_error($params['redirect_uri'], $params['state'] ?: null, 'access_denied', 'The learner declined the request.');
+        simplemcp_redirect_error(
+            $params['redirect_uri'],
+            $params['state'] ?: null,
+            'access_denied',
+            get_string('consent:err:declined', 'local_simplemcp')
+        );
     }
 
     global $DB, $USER;
@@ -165,36 +197,43 @@ if (data_submitted() && confirm_sesskey()) {
     ])));
 }
 
+// The client name is attacker-controllable when dynamic registration is on
+// (see README, "Dynamic client registration"). It is passed to the template
+// raw, because every field below except introhtml is rendered with {{ }},
+// which escapes. Only introhtml is rendered with {{{ }}}, so only the copy
+// built into it is escaped here — escaping twice would render a client
+// called "Foo & Bar" as "Foo &amp;amp; Bar".
+
+$formfields = ['sesskey' => sesskey()];
+foreach (['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'code_challenge', 'code_challenge_method'] as $field) {
+    $formfields[$field] = $params[$field];
+}
+
+$templatecontext = [
+    'heading' => get_string('pluginname', 'local_simplemcp'),
+    'introhtml' => get_string('consent:intro', 'local_simplemcp', [
+        'client' => html_writer::tag('strong', s($client->name)),
+        'brand' => s(simplemcpconfig::brand_name()),
+    ]),
+    'canlabel' => get_string('consent:canlabel', 'local_simplemcp', $client->name),
+    'cannotlabel' => get_string('consent:cannotlabel', 'local_simplemcp', $client->name),
+    'can' => array_map(
+        static fn(string $key): array => ['text' => get_string($key, 'local_simplemcp')],
+        ['consent:can:courses', 'consent:can:lessons', 'consent:can:progress']
+    ),
+    'cannot' => array_map(
+        static fn(string $key): array => ['text' => get_string($key, 'local_simplemcp')],
+        ['consent:cannot:grades', 'consent:cannot:submit', 'consent:cannot:otheraccounts', 'consent:cannot:hidden']
+    ),
+    'allowlabel' => get_string('consent:allow', 'local_simplemcp'),
+    'cancellabel' => get_string('consent:cancel', 'local_simplemcp'),
+    'formfields' => array_map(
+        static fn(string $name, string $value): array => ['name' => $name, 'value' => $value],
+        array_keys($formfields),
+        array_values($formfields)
+    ),
+];
+
 echo $OUTPUT->header();
-?>
-<div class="box generalbox" style="max-width: 40em; margin: 2em auto;">
-    <h2><?php echo get_string('pluginname', 'local_simplemcp'); ?></h2>
-    <p>Connect <strong><?php echo s($client->name); ?></strong> to <?php echo s(simplemcpconfig::brand_name()); ?></p>
-    <p><?php echo s($client->name); ?> will be able to:</p>
-    <ul>
-        <li>See courses you are enrolled in.</li>
-        <li>Read lessons currently available to you.</li>
-        <li>See your course progress.</li>
-    </ul>
-    <p><?php echo s($client->name); ?> will not be able to:</p>
-    <ul>
-        <li>Change grades or completion.</li>
-        <li>Submit assessments.</li>
-        <li>Access another learner's account.</li>
-        <li>Access hidden or locked course content.</li>
-    </ul>
-    <form method="post">
-        <input type="hidden" name="sesskey" value="<?php echo sesskey(); ?>">
-        <input type="hidden" name="response_type" value="<?php echo s($params['response_type']); ?>">
-        <input type="hidden" name="client_id" value="<?php echo s($params['client_id']); ?>">
-        <input type="hidden" name="redirect_uri" value="<?php echo s($params['redirect_uri']); ?>">
-        <input type="hidden" name="scope" value="<?php echo s($params['scope']); ?>">
-        <input type="hidden" name="state" value="<?php echo s($params['state']); ?>">
-        <input type="hidden" name="code_challenge" value="<?php echo s($params['code_challenge']); ?>">
-        <input type="hidden" name="code_challenge_method" value="<?php echo s($params['code_challenge_method']); ?>">
-        <button type="submit" name="simplemcp_decision" value="allow" class="btn btn-primary">Allow</button>
-        <button type="submit" name="simplemcp_decision" value="deny" class="btn btn-secondary">Cancel</button>
-    </form>
-</div>
-<?php
+echo $OUTPUT->render_from_template('local_simplemcp/consent', $templatecontext);
 echo $OUTPUT->footer();

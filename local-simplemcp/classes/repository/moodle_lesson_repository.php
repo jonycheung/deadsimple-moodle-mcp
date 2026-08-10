@@ -19,8 +19,6 @@ namespace local_simplemcp\repository;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\content_formatter;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Reads mod_lesson content for linear (non-branching) lessons only.
  *
@@ -52,6 +50,15 @@ class moodle_lesson_repository implements lesson_repository_interface {
      */
     public const CONTENT_PAGE_QTYPE = 20;
 
+    /**
+     * Reads one whole activity as linear text for the learner.
+     *
+     * @param \cm_info $cm The course module to read.
+     * @param int $userid The learner the request is acting as.
+     * @param int $maxchars Character budget for the returned content.
+     * @return array Content payload, including whether it was truncated.
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE if the content cannot be served.
+     */
     public function get_lesson(\cm_info $cm, int $userid, int $maxchars): array {
         $lesson = $this->load_lesson($cm);
         $pages = $this->load_ordered_content_pages((int) $lesson->id);
@@ -83,6 +90,15 @@ class moodle_lesson_repository implements lesson_repository_interface {
         ];
     }
 
+    /**
+     * Reads one addressable section of an activity.
+     *
+     * @param \cm_info $cm The course module to read.
+     * @param string $sectionid Section identifier as returned by get_lesson().
+     * @param int $userid The learner the request is acting as.
+     * @return array Content payload for that section alone.
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE if no such readable section exists.
+     */
     public function get_section(\cm_info $cm, string $sectionid, int $userid): array {
         $lesson = $this->load_lesson($cm);
         $pages = $this->load_ordered_content_pages((int) $lesson->id);
@@ -108,12 +124,21 @@ class moodle_lesson_repository implements lesson_repository_interface {
         ];
     }
 
+    /**
+     * Loads the mod_lesson instance row behind a course module.
+     *
+     * @param \cm_info $cm The course module to load.
+     * @return \stdClass The activity instance record.
+     */
     private function load_lesson(\cm_info $cm): \stdClass {
         global $DB;
         return $DB->get_record('lesson', ['id' => $cm->instance], '*', MUST_EXIST);
     }
 
     /**
+     * Walks the lesson's page chain, failing closed on anything non-linear.
+     *
+     * @param int $lessonid The lesson instance to read pages from.
      * @return \stdClass[] Ordered, content-type-only pages.
      */
     private function load_ordered_content_pages(int $lessonid): array {

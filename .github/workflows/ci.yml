@@ -1,0 +1,290 @@
+name: CI
+
+on:
+  push:
+    branches: ['*']
+    tags-ignore: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Only ever one CI run per branch — a new push cancels the in-flight one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Syntax gate across the whole PHP range this plugin supports, which is the
+  # same range Moodle 4.1 supports: 7.4 upwards. moodle-plugin-ci itself needs
+  # PHP 8.1+, so 7.4 and 8.0 are only ever exercised here.
+  lint:
+    name: php -l (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Lint every PHP file
+        run: find local-simplemcp -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+
+  test:
+    name: Moodle ${{ matrix.label }} · PHP ${{ matrix.php }} · ${{ matrix.database }}
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'true'
+          MARIADB_CHARACTER_SET_SERVER: utf8mb4
+          MARIADB_COLLATION_SERVER: utf8mb4_bin
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The exact point release OBC runs. MOODLE_BRANCH accepts a tag, and
+          # pinning one matters: MOODLE_401_STABLE has moved a long way past
+          # 4.1.2, so testing only the branch head would hide anything that
+          # relies on a core change landed after this release.
+          - moodle-branch: v4.1.2
+            label: '4.1.2'
+            php: '8.1'
+            database: pgsql
+          # Lowest supported branch head: Moodle 4.1 LTS. PHP stays at 8.1 —
+          # moodle-plugin-ci v4 itself requires 8.1+, so PHP 8.0 is covered by
+          # the lint job above rather than here.
+          - moodle-branch: MOODLE_401_STABLE
+            label: '4.1 head'
+            php: '8.1'
+            database: pgsql
+          - moodle-branch: MOODLE_401_STABLE
+            label: '4.1 head'
+            php: '8.1'
+            database: mariadb
+          # Moodle 4.5 LTS — the version most sites will be on.
+          - moodle-branch: MOODLE_405_STABLE
+            label: '4.5 LTS'
+            php: '8.2'
+            database: pgsql
+          # Newest supported, guards against forward-compat regressions.
+          - moodle-branch: MOODLE_500_STABLE
+            label: '5.0'
+            php: '8.3'
+            database: pgsql
+
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pgsql, mysqli, zip, gd, intl, soap, xmlrpc, sodium
+          ini-values: max_input_vars=5000
+          coverage: none
+
+      - name: Initialise moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist \
+            moodlehq/moodle-plugin-ci ci ^4
+          echo "$(cd ci/bin && pwd)" >> $GITHUB_PATH
+          echo "$(cd ci/vendor/bin && pwd)" >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+          echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
+
+      # `install` clones Moodle core and drops the plugin into local/simplemcp
+      # under whatever name version.php declares — the repo directory name
+      # (local-simplemcp) is irrelevant to it.
+      - name: Install Moodle + plugin
+        run: moodle-plugin-ci install --plugin ./plugin/local-simplemcp --db-host=127.0.0.1
+        env:
+          DB: ${{ matrix.database }}
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+          IGNORE_PATHS: dev
+
+      - name: PHP Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phplint
+
+      - name: PHP Mess Detector
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: moodle-plugin-ci phpmd
+
+      - name: Moodle Code Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: Moodle PHPDoc Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpdoc --max-warnings 0
+
+      - name: Validating
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci validate
+
+      - name: Check upgrade savepoints
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci savepoints
+
+      - name: Mustache Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci mustache
+
+      - name: Grunt
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci grunt --max-lint-warnings 0
+
+      - name: PHPUnit tests
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --fail-on-warning
+
+      - name: Behat features
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci behat --profile chrome
+
+  # The transport, the authenticator and the tools, exercised together over
+  # real HTTP against a real site. Nothing in the PHPUnit suite covers that
+  # seam, and it is where this plugin's earlier releases kept breaking.
+  smoke:
+    name: End-to-end smoke (M4.1 · PHP 8.1)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: pgsql, zip, gd, intl, soap, sodium
+          # Moodle's test-suite init fails its environment check without this.
+          ini-values: max_input_vars=5000
+          coverage: none
+
+      - name: Initialise moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist \
+            moodlehq/moodle-plugin-ci ci ^4
+          echo "$(cd ci/bin && pwd)" >> $GITHUB_PATH
+          echo "$(cd ci/vendor/bin && pwd)" >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+
+      - name: Install Moodle + plugin
+        run: moodle-plugin-ci install --plugin ./plugin/local-simplemcp --db-host=127.0.0.1
+        env:
+          DB: pgsql
+          MOODLE_BRANCH: MOODLE_401_STABLE
+          IGNORE_PATHS: dev
+
+      - name: Install a real Moodle site
+        run: |
+          # moodle-plugin-ci install prepares the PHPUnit and Behat databases
+          # (phpu_/bht_ prefixes) but never installs a browsable site, so the
+          # mdl_ tables do not exist yet. The smoke tests drive the plugin over
+          # HTTP as a logged-in learner, which needs an actual site.
+          sed -i "s#^\$CFG->wwwroot.*#\$CFG->wwwroot = 'http://127.0.0.1:8000';#" moodle/config.php
+          grep -n 'wwwroot' moodle/config.php
+
+          php moodle/admin/cli/install_database.php \
+            --agree-license \
+            --adminuser=admin \
+            --adminpass='Moodle.ci1' \
+            --adminemail=admin@example.com \
+            --fullname='Simple MCP CI' \
+            --shortname='simplemcp-ci'
+
+      - name: Serve the site and enable the plugin
+        run: |
+          php -S 127.0.0.1:8000 -t moodle > /tmp/webserver.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:8000/; then break; fi
+            sleep 2
+          done
+          curl -sf -o /dev/null -w 'site responded %{http_code}\n' http://127.0.0.1:8000/
+
+          for setting in "enabled 1" "enabletesttokens 1" "enableoauth 1" \
+                         "enabledcontenttypes lesson,page,book" "servername simplemcp-ci"; do
+            set -- $setting
+            php moodle/admin/cli/cfg.php --component=local_simplemcp --name="$1" --set="$2"
+          done
+          php moodle/admin/cli/purge_caches.php
+
+      - name: Seed test content
+        run: MOODLE_DIR="$PWD/moodle" php plugin/dev/bin/seed.php
+
+      - name: MCP tool smoke test
+        run: |
+          MCP_URL=http://127.0.0.1:8000/local/simplemcp/endpoint.php \
+          MCP_TOKEN_FILE="$PWD/moodledata/simplemcp-dev-token" \
+            bash plugin/dev/bin/smoke.sh
+
+      - name: OAuth flow smoke test
+        run: |
+          SITE=http://127.0.0.1:8000 MOODLE_DIR="$PWD/moodle" \
+            bash plugin/dev/bin/oauth-smoke.sh
+
+      - name: Web server log on failure
+        if: ${{ failure() }}
+        run: tail -100 /tmp/webserver.log || echo "(no web server log — the run failed before the server started)"
+
+  # A single required-status target, so branch protection does not have to
+  # name every matrix leg individually.
+  ci-passed:
+    name: CI passed
+    if: ${{ always() }}
+    needs: [lint, test, smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any job failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
+      - run: echo "All CI jobs passed."

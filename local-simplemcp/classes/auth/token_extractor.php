@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\auth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Shared `Authorization: Bearer <token>` header parsing, used by every
  * authenticator regardless of which credential store the token turns out
@@ -28,6 +26,11 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class token_extractor {
+    /**
+     * Pulls the raw bearer token out of the Authorization header.
+     *
+     * @return string|null The token, or null when the header is absent or malformed.
+     */
     public static function extract_bearer_token(): ?string {
         $header = null;
 
