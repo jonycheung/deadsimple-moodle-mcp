@@ -19,8 +19,6 @@ namespace local_simplemcp\service;
 use local_simplemcp\local\config;
 use local_simplemcp\repository\moodle_lesson_repository;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Lexical (LIKE-based) search over content activities (per
  * config::enabled_content_types() — lesson, page and/or book), restricted
@@ -39,6 +37,8 @@ defined('MOODLE_INTERNAL') || die();
  */
 class content_search_service {
     /**
+     * Searches content the learner can already read, ranked title first.
+     *
      * @return array[] Search hits per docs/mcp-poc-plan.md §13.
      */
     public function search(int $userid, string $query, ?int $courseid, int $limit): array {
@@ -68,6 +68,8 @@ class content_search_service {
     }
 
     /**
+     * The courses this search is allowed to look inside.
+     *
      * @return \stdClass[] Visible courses the learner is actively enrolled in.
      */
     private function accessible_courses(int $userid, ?int $courseid): array {
@@ -81,6 +83,14 @@ class content_search_service {
         return array_values($courses);
     }
 
+    /**
+     * Dispatches one activity to the search routine for its type.
+     *
+     * @param \cm_info $cm The activity to search.
+     * @param \stdClass $course The course it belongs to.
+     * @param string $query The learner's search term.
+     * @return array Zero or more hits.
+     */
     private function search_activity(\cm_info $cm, \stdClass $course, string $query): array {
         switch ($cm->modname) {
             case 'lesson':
@@ -94,6 +104,14 @@ class content_search_service {
         }
     }
 
+    /**
+     * Searches the content pages of one lesson.
+     *
+     * @param \cm_info $cm The lesson to search.
+     * @param \stdClass $course The course it belongs to.
+     * @param string $query The learner's search term.
+     * @return array Zero or more hits.
+     */
     private function search_lesson(\cm_info $cm, \stdClass $course, string $query): array {
         global $DB;
         $hits = [];
@@ -130,12 +148,28 @@ class content_search_service {
         foreach ($pages as $page) {
             $matchtype = (mb_stripos($page->title, $query) !== false) ? 'heading' : 'body';
             $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($page->contents), ENT_QUOTES)));
-            $hits[] = $this->build_hit($course, $cm, $lesson->name, (string) $page->id, $page->title, $this->excerpt($plain, $query), $matchtype);
+            $hits[] = $this->build_hit(
+                $course,
+                $cm,
+                $lesson->name,
+                (string) $page->id,
+                $page->title,
+                $this->excerpt($plain, $query),
+                $matchtype
+            );
         }
 
         return $hits;
     }
 
+    /**
+     * Searches the body of one page activity.
+     *
+     * @param \cm_info $cm The page to search.
+     * @param \stdClass $course The course it belongs to.
+     * @param string $query The learner's search term.
+     * @return array Zero or more hits.
+     */
     private function search_page(\cm_info $cm, \stdClass $course, string $query): array {
         global $DB;
         $hits = [];
@@ -167,6 +201,14 @@ class content_search_service {
         return $hits;
     }
 
+    /**
+     * Searches the chapters of one book activity.
+     *
+     * @param \cm_info $cm The book to search.
+     * @param \stdClass $course The course it belongs to.
+     * @param string $query The learner's search term.
+     * @return array Zero or more hits.
+     */
     private function search_book(\cm_info $cm, \stdClass $course, string $query): array {
         global $DB;
         $hits = [];
@@ -202,12 +244,28 @@ class content_search_service {
         foreach ($chapters as $chapter) {
             $matchtype = (mb_stripos($chapter->title, $query) !== false) ? 'heading' : 'body';
             $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($chapter->content), ENT_QUOTES)));
-            $hits[] = $this->build_hit($course, $cm, $book->name, (string) $chapter->id, $chapter->title, $this->excerpt($plain, $query), $matchtype);
+            $hits[] = $this->build_hit(
+                $course,
+                $cm,
+                $book->name,
+                (string) $chapter->id,
+                $chapter->title,
+                $this->excerpt($plain, $query),
+                $matchtype
+            );
         }
 
         return $hits;
     }
 
+    /**
+     * Cuts a short window of plain text around the first match.
+     *
+     * @param string $plain Plain text to excerpt from.
+     * @param string $query The matched search term.
+     * @param int $context Characters to keep either side of the match.
+     * @return string
+     */
     private function excerpt(string $plain, string $query, int $context = 80): string {
         $pos = mb_stripos($plain, $query);
         if ($pos === false) {
@@ -221,6 +279,9 @@ class content_search_service {
         return ($start > 0 ? '…' : '') . $excerpt . (($start + $length) < mb_strlen($plain) ? '…' : '');
     }
 
+    /**
+     * Shapes one search hit into the structure the tool returns.
+     */
     private function build_hit(
         \stdClass $course,
         \cm_info $cm,

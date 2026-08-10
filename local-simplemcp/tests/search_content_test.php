@@ -18,15 +18,23 @@ namespace local_simplemcp;
 
 use local_simplemcp\service\content_search_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests lexical content search and the access boundaries it respects.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_simplemcp\service\content_search_service
  */
 final class search_content_test extends \advanced_testcase {
+    /**
+     * Inserts one searchable lesson content page.
+     *
+     * @param int $lessonid The lesson instance to add to.
+     * @param string $title Page title.
+     * @param string $contents Page HTML.
+     * @return int The new page id.
+     */
     private function insert_content_page(int $lessonid, string $title, string $contents): int {
         global $DB;
         $page = new \stdClass();
@@ -87,21 +95,21 @@ final class search_content_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $courseA = $this->getDataGenerator()->create_course();
-        $courseB = $this->getDataGenerator()->create_course();
-        $lessonA = $this->getDataGenerator()->create_module('lesson', ['course' => $courseA->id]);
-        $lessonB = $this->getDataGenerator()->create_module('lesson', ['course' => $courseB->id]);
-        $this->insert_content_page($lessonA->id, 'A', '<p>commonsearchterm in course A</p>');
-        $this->insert_content_page($lessonB->id, 'B', '<p>commonsearchterm in course B</p>');
+        $coursea = $this->getDataGenerator()->create_course();
+        $courseb = $this->getDataGenerator()->create_course();
+        $lessona = $this->getDataGenerator()->create_module('lesson', ['course' => $coursea->id]);
+        $lessonb = $this->getDataGenerator()->create_module('lesson', ['course' => $courseb->id]);
+        $this->insert_content_page($lessona->id, 'A', '<p>commonsearchterm in course A</p>');
+        $this->insert_content_page($lessonb->id, 'B', '<p>commonsearchterm in course B</p>');
 
         $learner = $this->getDataGenerator()->create_user();
-        $this->getDataGenerator()->enrol_user($learner->id, $courseA->id, 'student');
-        $this->getDataGenerator()->enrol_user($learner->id, $courseB->id, 'student');
+        $this->getDataGenerator()->enrol_user($learner->id, $coursea->id, 'student');
+        $this->getDataGenerator()->enrol_user($learner->id, $courseb->id, 'student');
 
-        $results = (new content_search_service())->search($learner->id, 'commonsearchterm', $courseA->id, 5);
+        $results = (new content_search_service())->search($learner->id, 'commonsearchterm', $coursea->id, 5);
 
         $this->assertCount(1, $results);
-        $this->assertSame((int) $courseA->id, $results[0]['courseId']);
+        $this->assertSame((int) $coursea->id, $results[0]['courseId']);
     }
 
     public function test_search_limit_caps_result_count(): void {

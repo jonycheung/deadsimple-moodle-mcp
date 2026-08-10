@@ -20,15 +20,20 @@ use local_simplemcp\auth\authenticated_principal;
 use local_simplemcp\local\dispatcher;
 use local_simplemcp\local\mcp_exception;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests JSON-RPC routing, error mapping and the MCP handshake.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_simplemcp\local\dispatcher
  */
 final class dispatcher_test extends \advanced_testcase {
+    /**
+     * Builds a verified principal for a freshly created learner.
+     *
+     * @return authenticated_principal
+     */
     private function principal(): authenticated_principal {
         $user = $this->getDataGenerator()->create_user();
         return new authenticated_principal($user->id, 'obc.study.read', 'bearer_token', 1);

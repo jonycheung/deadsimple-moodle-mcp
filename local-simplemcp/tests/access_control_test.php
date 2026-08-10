@@ -20,9 +20,9 @@ use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\course_outline_service;
 use local_simplemcp\service\lesson_content_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests that every tool refuses data the learner is not entitled to.
+ *
  * Cross-user and visibility access-control regression tests.
  *
  * @package    local_simplemcp
@@ -101,17 +101,17 @@ final class access_control_test extends \advanced_testcase {
     public function test_one_learners_token_cannot_read_another_learners_course(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
-        $courseA = $this->getDataGenerator()->create_course();
-        $courseB = $this->getDataGenerator()->create_course();
-        $cmidA = $this->create_linear_lesson($courseA);
+        $coursea = $this->getDataGenerator()->create_course();
+        $courseb = $this->getDataGenerator()->create_course();
+        $cmida = $this->create_linear_lesson($coursea);
 
         $learnera = $this->getDataGenerator()->create_user();
         $learnerb = $this->getDataGenerator()->create_user();
-        $this->getDataGenerator()->enrol_user($learnera->id, $courseA->id, 'student');
-        $this->getDataGenerator()->enrol_user($learnerb->id, $courseB->id, 'student');
+        $this->getDataGenerator()->enrol_user($learnera->id, $coursea->id, 'student');
+        $this->getDataGenerator()->enrol_user($learnerb->id, $courseb->id, 'student');
 
         $this->expectException(mcp_exception::class);
-        (new lesson_content_service())->get_lesson($learnerb->id, $cmidA, 12000);
+        (new lesson_content_service())->get_lesson($learnerb->id, $cmida, 12000);
     }
 
     public function test_hidden_course_is_denied_even_when_enrolled(): void {

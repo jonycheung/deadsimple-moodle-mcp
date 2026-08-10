@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Typed accessor for local_simplemcp admin settings, with safe defaults.
  *
@@ -26,11 +24,18 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class config {
+    /**
+     * Whether the MCP endpoint accepts traffic at all.
+     *
+     * @return bool
+     */
     public static function is_enabled(): bool {
         return (bool) get_config('local_simplemcp', 'enabled');
     }
 
     /**
+     * Activity types this install is allowed to read content from.
+     *
      * @return string[] modnames (e.g. 'lesson', 'page', 'book') this
      *         install is allowed to read content from. Defaults to
      *         ['lesson'] — the only type confirmed in use at OBC.
@@ -43,53 +48,124 @@ class config {
         return array_values(array_filter(array_map('trim', explode(',', $raw))));
     }
 
+    /**
+     * Whether the temporary hashed bearer-token auth mode is accepted.
+     *
+     * @return bool
+     */
     public static function test_tokens_enabled(): bool {
         return (bool) get_config('local_simplemcp', 'enabletesttokens');
     }
 
+    /**
+     * Whether the OAuth 2.1 + PKCE flow is available.
+     *
+     * @return bool
+     */
     public static function oauth_enabled(): bool {
         return (bool) get_config('local_simplemcp', 'enableoauth');
     }
 
+    /**
+     * Whether clients may self-register via RFC 7591.
+     *
+     * @return bool
+     */
     public static function dynamic_registration_enabled(): bool {
         return self::oauth_enabled() && (bool) get_config('local_simplemcp', 'enabledynamicregistration');
     }
 
+    /**
+     * Per-learner rate limit applied to tools/call.
+     *
+     * @return int Calls per minute; always positive.
+     */
     public static function max_calls_per_minute(): int {
         $value = (int) get_config('local_simplemcp', 'maxcallsperminute');
         return $value > 0 ? $value : 30;
     }
 
+    /**
+     * Upper bound on hits returned by the content search tool.
+     *
+     * @return int Always positive.
+     */
     public static function max_search_results(): int {
         $value = (int) get_config('local_simplemcp', 'maxsearchresults');
         return $value > 0 ? $value : 10;
     }
 
+    /**
+     * Default and maximum size of a single content response.
+     *
+     * @return int Characters; always positive.
+     */
     public static function max_content_chars(): int {
         $value = (int) get_config('local_simplemcp', 'maxcontentchars');
         return $value > 0 ? $value : 12000;
     }
 
+    /**
+     * Largest request body accepted before JSON parsing.
+     *
+     * @return int Bytes; always positive.
+     */
     public static function max_request_bytes(): int {
         $value = (int) get_config('local_simplemcp', 'maxrequestbytes');
         return $value > 0 ? $value : 1048576;
     }
 
+    /**
+     * How long audit rows are kept before the purge task removes them.
+     *
+     * @return int Days; always positive.
+     */
     public static function audit_retention_days(): int {
         $value = (int) get_config('local_simplemcp', 'auditretentiondays');
         return $value > 0 ? $value : 30;
     }
 
+    /**
+     * This plugin's own release string, reported as serverInfo.version.
+     *
+     * Read from the installed plugin rather than hardcoded, so a release can
+     * never report a version it is not.
+     *
+     * @return string
+     */
+    public static function plugin_version(): string {
+        $info = \core_plugin_manager::instance()->get_plugin_info('local_simplemcp');
+        if ($info !== null && !empty($info->release)) {
+            return (string) $info->release;
+        }
+
+        // Before the plugin has been through an install/upgrade there is no
+        // plugin info to read; the stored numeric version is always there.
+        return (string) get_config('local_simplemcp', 'version');
+    }
+
+    /**
+     * MCP protocol version reported from initialize.
+     *
+     * @return string
+     */
     public static function protocol_version(): string {
         $value = (string) get_config('local_simplemcp', 'protocolversion');
         return $value !== '' ? $value : '2024-11-05';
     }
 
+    /**
+     * Whether unexpected failures are also written to the web server error log.
+     *
+     * @return bool
+     */
     public static function debug_logging(): bool {
         return (bool) get_config('local_simplemcp', 'debuglogging');
     }
 
     /**
+     * Origin header values the endpoint accepts.
+     *
      * @return string[] Allowed Origin header values, or [] to skip checking.
      */
     public static function allowed_origins(): array {

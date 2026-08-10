@@ -19,8 +19,6 @@ namespace local_simplemcp\repository;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\content_formatter;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Reads mod_page content. A page is a single block of HTML with no
  * sub-navigation, so it maps onto exactly one section (id "1") rather
@@ -31,8 +29,20 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodle_page_repository implements lesson_repository_interface {
+    /**
+     * @var string A mod_page has exactly one section, always addressed as "1".
+     */
     private const ONLY_SECTION_ID = '1';
 
+    /**
+     * Reads one whole activity as linear text for the learner.
+     *
+     * @param \cm_info $cm The course module to read.
+     * @param int $userid The learner the request is acting as.
+     * @param int $maxchars Character budget for the returned content.
+     * @return array Content payload, including whether it was truncated.
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE if the content cannot be served.
+     */
     public function get_lesson(\cm_info $cm, int $userid, int $maxchars): array {
         $page = $this->load_page($cm);
         $context = $cm->context;
@@ -51,6 +61,15 @@ class moodle_page_repository implements lesson_repository_interface {
         ];
     }
 
+    /**
+     * Reads one addressable section of an activity.
+     *
+     * @param \cm_info $cm The course module to read.
+     * @param string $sectionid Section identifier as returned by get_lesson().
+     * @param int $userid The learner the request is acting as.
+     * @return array Content payload for that section alone.
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE if no such readable section exists.
+     */
     public function get_section(\cm_info $cm, string $sectionid, int $userid): array {
         if ($sectionid !== self::ONLY_SECTION_ID) {
             throw new mcp_exception(mcp_exception::CONTENT_UNAVAILABLE, 'error:contentunavailable');
@@ -62,10 +81,23 @@ class moodle_page_repository implements lesson_repository_interface {
         return [
             'id' => self::ONLY_SECTION_ID,
             'heading' => format_string($page->name, true, ['context' => $context]),
-            'content' => content_formatter::format_html($page->content, $page->contentformat, $context, 'mod_page', 'content', $page->id),
+            'content' => content_formatter::format_html(
+                $page->content,
+                $page->contentformat,
+                $context,
+                'mod_page',
+                'content',
+                $page->id
+            ),
         ];
     }
 
+    /**
+     * Loads the mod_page instance row behind a course module.
+     *
+     * @param \cm_info $cm The course module to load.
+     * @return \stdClass The activity instance record.
+     */
     private function load_page(\cm_info $cm): \stdClass {
         global $DB;
         return $DB->get_record('page', ['id' => $cm->instance], '*', MUST_EXIST);

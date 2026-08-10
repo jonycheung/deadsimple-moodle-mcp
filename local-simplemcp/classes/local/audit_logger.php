@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Writes tool-call audit records. Never stores the raw token, full lesson
  * content, or full request/response bodies — only identifiers, status and
@@ -28,6 +26,18 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class audit_logger {
+    /**
+     * Writes one audit row for a completed tool call.
+     *
+     * Never records raw tokens, prompts, or content — only metadata.
+     *
+     * @param request_context $context Carries the principal and request timing.
+     * @param string $toolname The tool that was called.
+     * @param string $status Outcome marker, e.g. 'ok' or 'error'.
+     * @param array $arguments Validated arguments, read only for course/activity ids.
+     * @param int|null $responsechars Size of the response, when there was one.
+     * @return void
+     */
     public static function record(
         request_context $context,
         string $toolname,

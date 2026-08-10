@@ -35,6 +35,16 @@ use local_simplemcp\local\mcp_exception;
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
+/**
+ * Emits a JSON-RPC error with a non-200 HTTP status and stops.
+ *
+ * Used only for transport-level rejections that happen before a request is
+ * parsed or authenticated.
+ *
+ * @param int $httpstatus HTTP status code to send.
+ * @param string $stringkey local_simplemcp language string key for the message.
+ * @return void Never returns; exits.
+ */
 function local_simplemcp_send_http_error(int $httpstatus, string $stringkey): void {
     http_response_code($httpstatus);
     echo json_encode(jsonrpc::error(null, mcp_exception::INVALID_REQUEST, get_string($stringkey, 'local_simplemcp')));
@@ -100,16 +110,13 @@ try {
     // failure (a coding_exception, a DB error, etc.) has to come back as a
     // JSON-RPC error, not Moodle's default error renderer, which would leak
     // file paths/stack traces to the client whenever debug display is on.
-    error_log(sprintf(
-        'local_simplemcp endpoint auth error: %s: %s in %s:%d',
-        get_class($e),
-        $e->getMessage(),
-        $e->getFile(),
-        $e->getLine()
-    ));
-    debugging('local_simplemcp endpoint auth error: ' . $e->getMessage(), DEBUG_DEVELOPER);
+    \local_simplemcp\local\logger::exception('endpoint auth', $e);
     http_response_code(200);
-    echo json_encode(jsonrpc::error($requestid, mcp_exception::INTERNAL_ERROR, get_string('error:internalerror', 'local_simplemcp')));
+    echo json_encode(jsonrpc::error(
+        $requestid,
+        mcp_exception::INTERNAL_ERROR,
+        get_string('error:internalerror', 'local_simplemcp')
+    ));
     exit;
 }
 

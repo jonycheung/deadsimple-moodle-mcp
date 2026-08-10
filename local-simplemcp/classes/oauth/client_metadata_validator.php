@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\oauth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Validates RFC 7591 client registration metadata for
  * oauth/register.php. Kept as a plain class (not a script-local function)
@@ -43,15 +41,33 @@ class client_metadata_validator {
         return (bool) preg_match('#^http://(localhost|127\.0\.0\.1)(:\d+)?(/|$)#i', $uri);
     }
 
+    /**
+     * Whether a client proposes a token endpoint auth method this server supports.
+     *
+     * @param string $method The requested token_endpoint_auth_method.
+     * @return bool
+     */
     public static function is_valid_auth_method(string $method): bool {
         return in_array($method, ['none', 'client_secret_post'], true);
     }
 
+    /**
+     * Whether every requested grant type is one this server issues.
+     *
+     * @param mixed $granttypes The client's requested grant_types, as submitted.
+     * @return bool
+     */
     public static function is_valid_grant_types($granttypes): bool {
         return is_array($granttypes) && !empty($granttypes)
             && !array_diff($granttypes, ['authorization_code', 'refresh_token']);
     }
 
+    /**
+     * Whether every requested response type is one this server supports.
+     *
+     * @param mixed $responsetypes The client's requested response_types, as submitted.
+     * @return bool
+     */
     public static function is_valid_response_types($responsetypes): bool {
         return is_array($responsetypes) && !empty($responsetypes) && !array_diff($responsetypes, ['code']);
     }

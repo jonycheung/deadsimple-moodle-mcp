@@ -20,24 +20,39 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\request_context;
 use local_simplemcp\service\learner_course_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * MCP tool: the courses the authenticated learner is currently enrolled in.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_my_courses extends abstract_tool {
+    /**
+     * The tool name exposed over MCP. Must stay stable: clients bind to it.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return 'get_my_courses';
     }
 
+    /**
+     * Model-facing description of what this tool does and how to cite it.
+     *
+     * @return string
+     */
     public function get_description(): string {
         return 'List the ' . config::brand_name() . ' courses the authenticated learner is currently enrolled in. '
             . 'Results apply only to the authenticated learner and never include hidden or unavailable courses. '
             . 'Cite the course name and URL when referencing a course in your answer.';
     }
 
+    /**
+     * JSON-schema-compatible description of this tool's arguments.
+     *
+     * @return array
+     */
     public function get_input_schema(): array {
         return [
             'type' => 'object',
@@ -48,10 +63,22 @@ class get_my_courses extends abstract_tool {
         ];
     }
 
+    /**
+     * The capability a learner needs before this tool is offered or run.
+     *
+     * @return string|null Null means local/simplemcp:use alone is enough.
+     */
     public function get_capability(): ?string {
         return 'local/simplemcp:readowncourses';
     }
 
+    /**
+     * Runs the tool for the authenticated learner in $context.
+     *
+     * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context Carries the authenticated principal.
+     * @return array MCP tool result envelope.
+     */
     public function execute(array $arguments, request_context $context): array {
         $service = new learner_course_service();
         $courses = $service->get_my_courses($context->principal->userid, (bool) $arguments['includeCompleted']);

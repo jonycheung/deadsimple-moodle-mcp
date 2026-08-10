@@ -16,9 +16,9 @@
 
 namespace local_simplemcp\auth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * One way of turning an HTTP credential into a verified learner.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

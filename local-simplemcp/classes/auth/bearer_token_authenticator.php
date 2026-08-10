@@ -21,8 +21,6 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\local\rate_limiter;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Temporary POC authentication: a single hashed bearer token per test
  * learner, issued via the local/simplemcp/cli/issue_token.php CLI script.
@@ -33,6 +31,12 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class bearer_token_authenticator implements authenticator_interface {
+    /**
+     * Verifies the incoming credential and resolves the learner behind it.
+     *
+     * @return authenticated_principal The verified caller.
+     * @throws \local_simplemcp\local\mcp_exception AUTH_REQUIRED when no usable credential is present.
+     */
     public function authenticate(): authenticated_principal {
         global $DB;
 

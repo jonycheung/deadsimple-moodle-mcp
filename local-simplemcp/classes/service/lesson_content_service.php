@@ -22,8 +22,6 @@ use local_simplemcp\local\mcp_exception;
 use local_simplemcp\repository\lesson_repository_interface;
 use local_simplemcp\repository\repository_factory;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Enforces enrolment, visibility, availability and capability checks for
  * lesson content, then delegates to whichever repository_factory adapter
@@ -46,10 +44,25 @@ class lesson_content_service {
     /** @var lesson_repository_interface|null Test-only override; bypasses repository_factory for every modname. */
     private ?lesson_repository_interface $repositoryoverride;
 
+    /**
+     * Builds the service, optionally against a fixed content adapter.
+     *
+     * @param lesson_repository_interface|null $repository Adapter to use for every call;
+     *         null picks one per activity via repository_factory.
+     */
     public function __construct(?lesson_repository_interface $repository = null) {
         $this->repositoryoverride = $repository;
     }
 
+    /**
+     * Reads one whole activity, after checking the learner may see it.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param int $cmid Course module id of the activity to read.
+     * @param int $maxchars Character budget for the returned content.
+     * @return array Content payload, including whether it was truncated.
+     * @throws \local_simplemcp\local\mcp_exception If the learner may not read this activity.
+     */
     public function get_lesson(int $userid, int $cmid, int $maxchars): array {
         $cm = $this->resolve_authorised_cm($userid, $cmid);
         $repository = $this->repositoryoverride ?? repository_factory::for_modname($cm->modname);
@@ -70,6 +83,15 @@ class lesson_content_service {
         ];
     }
 
+    /**
+     * Reads one section of an activity, after checking the learner may see it.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param int $cmid Course module id of the activity to read.
+     * @param string $sectionid Section identifier as returned by get_lesson().
+     * @return array Content payload for that section alone.
+     * @throws \local_simplemcp\local\mcp_exception If the learner may not read this activity.
+     */
     public function get_section(int $userid, int $cmid, string $sectionid): array {
         $cm = $this->resolve_authorised_cm($userid, $cmid);
         $repository = $this->repositoryoverride ?? repository_factory::for_modname($cm->modname);
@@ -91,6 +113,14 @@ class lesson_content_service {
         ];
     }
 
+    /**
+     * Resolves a course module id to something this learner is allowed to read.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param int $cmid Course module id supplied by the client.
+     * @return \cm_info
+     * @throws \local_simplemcp\local\mcp_exception On any enrolment, visibility or type restriction.
+     */
     private function resolve_authorised_cm(int $userid, int $cmid): \cm_info {
         // Empty modname: match any activity type — the enabled-content-type
         // check below is what actually restricts which types are usable.

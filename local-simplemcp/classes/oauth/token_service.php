@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\oauth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Issues short-lived access tokens and rotating-family refresh tokens.
  *
@@ -41,6 +39,8 @@ class token_service {
     private const REFRESH_TOKEN_LIFETIME_SECONDS = 30 * 24 * 60 * 60;
 
     /**
+     * Issues a fresh access/refresh token pair for one learner and client.
+     *
      * @return array{access_token: string, refresh_token: string, expires_in: int, scope: string}
      */
     public function issue_tokens(int $clientdbid, int $userid, string $scope, ?string $familyid = null): array {
@@ -81,6 +81,8 @@ class token_service {
     }
 
     /**
+     * Rotates a refresh token, revoking the whole family if a used one is replayed.
+     *
      * @throws \moodle_exception with error:invalidgrant on any invalid,
      *         expired, revoked, or reused refresh token.
      */
@@ -126,7 +128,12 @@ class token_service {
             $DB->set_field('local_simplemcp_refresh', 'timeused', time(), ['id' => $record->id]);
 
             $tokens = $this->issue_tokens($clientdbid, (int) $record->userid, $record->scope, $record->familyid);
-            $DB->set_field('local_simplemcp_refresh', 'parentid', $record->id, ['tokenhash' => hash('sha256', $tokens['refresh_token'])]);
+            $DB->set_field(
+                'local_simplemcp_refresh',
+                'parentid',
+                $record->id,
+                ['tokenhash' => hash('sha256', $tokens['refresh_token'])]
+            );
 
             return $tokens;
         } finally {
@@ -134,6 +141,13 @@ class token_service {
         }
     }
 
+    /**
+     * Revokes one access token, if it belongs to this client.
+     *
+     * @param string $rawtoken The raw access token presented for revocation.
+     * @param int $clientdbid Row id of the client requesting revocation.
+     * @return void
+     */
     public function revoke_access_token(string $rawtoken, int $clientdbid): void {
         global $DB;
         $DB->set_field_select(
@@ -145,6 +159,13 @@ class token_service {
         );
     }
 
+    /**
+     * Revokes one refresh token, if it belongs to this client.
+     *
+     * @param string $rawtoken The raw refresh token presented for revocation.
+     * @param int $clientdbid Row id of the client requesting revocation.
+     * @return void
+     */
     public function revoke_refresh_token(string $rawtoken, int $clientdbid): void {
         global $DB;
         $record = $DB->get_record('local_simplemcp_refresh', ['tokenhash' => hash('sha256', $rawtoken)]);

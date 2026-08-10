@@ -20,19 +20,34 @@ use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\content_search_service;
 use local_simplemcp\service\lesson_content_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests reading mod_book chapters through the book content adapter.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_simplemcp\repository\moodle_book_repository
  */
 final class book_content_test extends \advanced_testcase {
+    /**
+     * Turns on the Book content adapter, which is off by default.
+     *
+     * @return void
+     */
     private function enable_book_type(): void {
         set_config('enabledcontenttypes', 'lesson,book', 'local_simplemcp');
     }
 
+    /**
+     * Inserts one book chapter directly, bypassing the mod_book UI.
+     *
+     * @param int $bookid The book instance to add to.
+     * @param int $pagenum Position of the chapter within the book.
+     * @param string $title Chapter title.
+     * @param string $content Chapter HTML.
+     * @param int $hidden 1 to mark the chapter hidden.
+     * @return int The new chapter id.
+     */
     private function insert_chapter(int $bookid, int $pagenum, string $title, string $content, int $hidden = 0): int {
         global $DB;
         $chapter = new \stdClass();

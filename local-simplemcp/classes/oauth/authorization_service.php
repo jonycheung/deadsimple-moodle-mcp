@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\oauth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Issues and consumes short-lived, single-use authorisation codes.
  *
@@ -30,6 +28,8 @@ class authorization_service {
     private const CODE_LIFETIME_SECONDS = 5 * 60;
 
     /**
+     * Issues a single-use authorisation code for an approved grant.
+     *
      * @return string The raw authorisation code (returned to the client via
      *         redirect only — never stored in recoverable form).
      */

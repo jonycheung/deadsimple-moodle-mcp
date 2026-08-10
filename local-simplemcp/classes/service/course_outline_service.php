@@ -19,8 +19,6 @@ namespace local_simplemcp\service;
 use local_simplemcp\local\access_guard;
 use local_simplemcp\local\config;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Read-only course structure: sections and the content activities (per
  * config::enabled_content_types() — lesson by default, optionally page
@@ -34,6 +32,14 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course_outline_service {
+    /**
+     * Builds the section/activity outline of a course for one learner.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param int $courseid The course to outline.
+     * @return array Sections, each carrying the activities that learner can see.
+     * @throws \local_simplemcp\local\mcp_exception PERMISSION_DENIED if the learner cannot see the course.
+     */
     public function get_outline(int $userid, int $courseid): array {
         $course = get_course($courseid);
         access_guard::assert_course_accessible($userid, $course);
@@ -41,7 +47,7 @@ class course_outline_service {
 
         $modinfo = get_fast_modinfo($course, $userid);
 
-        // completion_info lives in lib/completionlib.php, which Moodle only
+        // The completion_info class lives in lib/completionlib.php, which Moodle only
         // loads on demand. This happened to work without an explicit
         // require_once here (get_fast_modinfo() appears to load it as a
         // side effect), but that's an undocumented ordering accident, not

@@ -20,18 +20,28 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\request_context;
 use local_simplemcp\service\content_search_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * MCP tool: lexical search across content the learner can already read.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class search_my_course_content extends abstract_tool {
+    /**
+     * The tool name exposed over MCP. Must stay stable: clients bind to it.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return 'search_my_course_content';
     }
 
+    /**
+     * Model-facing description of what this tool does and how to cite it.
+     *
+     * @return string
+     */
     public function get_description(): string {
         return 'Search only the ' . config::brand_name() . ' lesson content the authenticated learner is currently enrolled in and '
             . 'authorised to access. Returns short excerpts, not full lessons — use get_lesson_content or '
@@ -39,6 +49,11 @@ class search_my_course_content extends abstract_tool {
             . 'referencing a result.';
     }
 
+    /**
+     * JSON-schema-compatible description of this tool's arguments.
+     *
+     * @return array
+     */
     public function get_input_schema(): array {
         return [
             'type' => 'object',
@@ -52,10 +67,22 @@ class search_my_course_content extends abstract_tool {
         ];
     }
 
+    /**
+     * The capability a learner needs before this tool is offered or run.
+     *
+     * @return string|null Null means local/simplemcp:use alone is enough.
+     */
     public function get_capability(): ?string {
         return 'local/simplemcp:readavailablecontent';
     }
 
+    /**
+     * Runs the tool for the authenticated learner in $context.
+     *
+     * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context Carries the authenticated principal.
+     * @return array MCP tool result envelope.
+     */
     public function execute(array $arguments, request_context $context): array {
         $service = new content_search_service();
         $results = $service->search(

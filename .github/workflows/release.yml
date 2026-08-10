@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re)build a release for, e.g. v0.1.0'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PLUGIN_COMPONENT: local_simplemcp
+  # Directory the plugin must unzip to inside Moodle's local/ directory.
+  PLUGIN_DIRNAME: simplemcp
+  # Directory the plugin lives in inside this repository.
+  PLUGIN_SOURCE: local-simplemcp
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1. Refuse to publish a tag whose version.php disagrees with it, and
+  #    refuse to publish anything that does not pass the checks CI runs.
+  # ---------------------------------------------------------------------
+  verify:
+    name: Verify tag and run checks
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release: ${{ steps.meta.outputs.release }}
+      requires: ${{ steps.meta.outputs.requires }}
+      maturity: ${{ steps.meta.outputs.maturity }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          path: plugin
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: pgsql, mysqli, zip, gd, intl, soap, sodium
+          coverage: none
+
+      - name: Read version.php and compare with the tag
+        id: meta
+        working-directory: plugin
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          php dev/bin/plugin-meta.php "$PLUGIN_SOURCE/version.php" >> "$GITHUB_OUTPUT"
+          php dev/bin/plugin-meta.php "$PLUGIN_SOURCE/version.php" --check-tag "$TAG"
+
+      - name: Confirm the CHANGELOG has an entry for this version
+        working-directory: plugin
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if ! grep -qE "^## \[${TAG#v}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${TAG#v}]' section. Add release notes before tagging."
+            exit 1
+          fi
+
+      - name: Initialise moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist \
+            moodlehq/moodle-plugin-ci ci ^4
+          echo "$(cd ci/bin && pwd)" >> $GITHUB_PATH
+          echo "$(cd ci/vendor/bin && pwd)" >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+
+      - name: Install Moodle + plugin
+        run: moodle-plugin-ci install --plugin ./plugin/$PLUGIN_SOURCE --db-host=127.0.0.1
+        env:
+          DB: pgsql
+          MOODLE_BRANCH: MOODLE_401_STABLE
+          IGNORE_PATHS: dev
+
+      - name: Moodle Code Checker
+        run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: Validating
+        run: moodle-plugin-ci validate
+
+      - name: PHPUnit tests
+        run: moodle-plugin-ci phpunit --fail-on-warning
+
+  # ---------------------------------------------------------------------
+  # 2. Build the Moodle-shaped zip and publish it.
+  # ---------------------------------------------------------------------
+  publish:
+    name: Build zip and publish release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Build the plugin zip
+        id: build
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          ZIP="${PLUGIN_COMPONENT}_moodle_${TAG}.zip"
+
+          # Moodle expects the zip's single top-level directory to be the
+          # plugin's own dirname (local/<dirname>), not the repo directory.
+          STAGE="$(mktemp -d)"
+          cp -a "$PLUGIN_SOURCE" "$STAGE/$PLUGIN_DIRNAME"
+
+          # Development-only files must not ship inside an installable zip.
+          rm -rf "$STAGE/$PLUGIN_DIRNAME/.git" \
+                 "$STAGE/$PLUGIN_DIRNAME/.github" \
+                 "$STAGE/$PLUGIN_DIRNAME/node_modules"
+          find "$STAGE/$PLUGIN_DIRNAME" -name '.DS_Store' -delete
+
+          cp LICENSE "$STAGE/$PLUGIN_DIRNAME/LICENSE"
+          cp CHANGELOG.md "$STAGE/$PLUGIN_DIRNAME/CHANGELOG.md"
+
+          (cd "$STAGE" && zip -r -q -X "$GITHUB_WORKSPACE/$ZIP" "$PLUGIN_DIRNAME")
+          sha256sum "$ZIP" > "$ZIP.sha256"
+
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "--- zip contents (first 20) ---"
+          unzip -l "$ZIP" | head -25
+
+      - name: Sanity-check the zip layout
+        run: |
+          ZIP="${{ steps.build.outputs.zip }}"
+          # Every path must sit under a single simplemcp/ root, and version.php
+          # must be exactly one level down — Moodle rejects anything else.
+          if ! unzip -l "$ZIP" | grep -q " ${PLUGIN_DIRNAME}/version.php$"; then
+            echo "::error::${PLUGIN_DIRNAME}/version.php missing from the zip root."
+            exit 1
+          fi
+          if unzip -Z1 "$ZIP" | grep -vq "^${PLUGIN_DIRNAME}/"; then
+            echo "::error::zip contains paths outside ${PLUGIN_DIRNAME}/."
+            exit 1
+          fi
+
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          # Everything between this version's heading and the next one.
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { capture = 1; next }
+            capture && /^## \[/     { exit }
+            capture                 { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+
+          {
+            echo ""
+            echo "### Install"
+            echo ""
+            echo "Download \`${{ steps.build.outputs.zip }}\` below, then either:"
+            echo ""
+            echo "- **Site administration → Plugins → Install plugins**, upload the zip, or"
+            echo "- unzip it into your Moodle's \`local/\` directory so the plugin lands at \`local/${PLUGIN_DIRNAME}/\`, then visit **Site administration → Notifications**."
+            echo ""
+            echo "Requires Moodle 4.1 (build \`${{ needs.verify.outputs.requires }}\`) or later. Plugin version \`${{ needs.verify.outputs.version }}\`, maturity \`${{ needs.verify.outputs.maturity }}\`."
+          } >> RELEASE_NOTES.md
+
+          cat RELEASE_NOTES.md
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ needs.verify.outputs.prerelease == '1' }}
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.build.outputs.zip }}
+            ${{ steps.build.outputs.zip }}.sha256

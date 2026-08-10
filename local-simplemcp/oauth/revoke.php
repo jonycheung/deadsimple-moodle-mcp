@@ -81,13 +81,7 @@ if ($token !== '') {
             $tokenservice->revoke_refresh_token($token, (int) $client->id);
         }
     } catch (\Throwable $e) {
-        error_log(sprintf(
-            'local_simplemcp oauth/revoke.php error: %s: %s in %s:%d',
-            get_class($e),
-            $e->getMessage(),
-            $e->getFile(),
-            $e->getLine()
-        ));
+        \local_simplemcp\local\logger::exception('oauth/revoke.php', $e);
     }
 }
 

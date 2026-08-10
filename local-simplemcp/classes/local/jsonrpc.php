@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * JSON-RPC 2.0 envelope helpers.
  *
@@ -26,10 +24,25 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class jsonrpc {
+    /**
+     * Builds a JSON-RPC 2.0 success response.
+     *
+     * @param mixed $id The request id to echo back; null for a notification.
+     * @param mixed $result The result payload.
+     * @return array
+     */
     public static function result($id, $result): array {
         return ['jsonrpc' => '2.0', 'id' => $id, 'result' => $result];
     }
 
+    /**
+     * Builds a JSON-RPC 2.0 error response.
+     *
+     * @param mixed $id The request id to echo back, or null when unknown.
+     * @param int $code JSON-RPC error code.
+     * @param string $message Client-safe error message.
+     * @return array
+     */
     public static function error($id, int $code, string $message): array {
         return ['jsonrpc' => '2.0', 'id' => $id, 'error' => ['code' => $code, 'message' => $message]];
     }

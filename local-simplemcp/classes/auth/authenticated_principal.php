@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\auth;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * The authenticated learner a request is acting as, plus the scope and
  * credential identity used to authenticate. Tools must only ever read the
@@ -28,14 +26,35 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class authenticated_principal {
+    /**
+     * Records who a verified request is acting as.
+     */
     public function __construct(
+        /**
+         * @var int Moodle user id this request acts as.
+         */
         public int $userid,
+        /**
+         * @var string The single scope the credential carries.
+         */
         public string $scope,
+        /**
+         * @var string Which credential store verified this: bearer_token or oauth_access_token.
+         */
         public string $credentialtype,
+        /**
+         * @var int|null Row id within that credential store, for auditing.
+         */
         public ?int $credentialid = null
     ) {
     }
 
+    /**
+     * Whether this principal carries the given scope.
+     *
+     * @param string $scope The scope to check for.
+     * @return bool
+     */
     public function has_scope(string $scope): bool {
         return $this->scope === $scope;
     }

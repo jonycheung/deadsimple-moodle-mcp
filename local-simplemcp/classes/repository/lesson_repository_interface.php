@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\repository;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Type-agnostic contract for reading lesson content out of a Moodle
  * activity. Kept generic even though the only adapter shipped in this POC
@@ -35,6 +33,8 @@ defined('MOODLE_INTERNAL') || die();
  */
 interface lesson_repository_interface {
     /**
+     * Reads one whole activity as linear text for the learner.
+     *
      * @return array{title: string, contentFormat: string, content: string, truncated: bool, sections: array}
      * @throws \local_simplemcp\local\mcp_exception with CONTENT_UNAVAILABLE if
      *         the activity has no usable linear content structure.
@@ -42,6 +42,8 @@ interface lesson_repository_interface {
     public function get_lesson(\cm_info $cm, int $userid, int $maxchars): array;
 
     /**
+     * Reads one addressable section of an activity.
+     *
      * @return array{id: string, heading: ?string, content: string}
      * @throws \local_simplemcp\local\mcp_exception with CONTENT_UNAVAILABLE if
      *         $sectionid does not exist in this lesson.

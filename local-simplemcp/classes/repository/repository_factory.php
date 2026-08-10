@@ -18,8 +18,6 @@ namespace local_simplemcp\repository;
 
 use local_simplemcp\local\mcp_exception;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Maps a course module's modname to the repository adapter that knows how
  * to read its content. Explicit allowlist, same principle as
@@ -30,12 +28,22 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class repository_factory {
+    /**
+     * @var array<string, class-string> Content adapter to use for each supported activity type.
+     */
     private const MODNAME_TO_CLASS = [
         'lesson' => moodle_lesson_repository::class,
         'page' => moodle_page_repository::class,
         'book' => moodle_book_repository::class,
     ];
 
+    /**
+     * Picks the content adapter for an activity type, if this site enabled it.
+     *
+     * @param string $modname The activity type, e.g. 'lesson'.
+     * @return lesson_repository_interface
+     * @throws \local_simplemcp\local\mcp_exception CONTENT_UNAVAILABLE for an unsupported or disabled type.
+     */
     public static function for_modname(string $modname): lesson_repository_interface {
         if (!isset(self::MODNAME_TO_CLASS[$modname])) {
             throw new mcp_exception(mcp_exception::CONTENT_UNAVAILABLE, 'error:contentunavailable');

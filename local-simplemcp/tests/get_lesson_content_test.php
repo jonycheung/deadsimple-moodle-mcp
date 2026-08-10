@@ -19,9 +19,9 @@ namespace local_simplemcp;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\lesson_content_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests reading mod_lesson content, including truncation and fail-closed cases.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -29,6 +29,16 @@ defined('MOODLE_INTERNAL') || die();
  * @covers     \local_simplemcp\service\lesson_content_service
  */
 final class get_lesson_content_test extends \advanced_testcase {
+    /**
+     * Inserts one lesson page, linking it onto the end of the page chain.
+     *
+     * @param int $lessonid The lesson instance to add to.
+     * @param string $title Page title.
+     * @param string $contents Page HTML.
+     * @param int $prevpageid Page to link this one after; 0 for the first page.
+     * @param int $qtype Lesson page type; 20 is a content page.
+     * @return int The new page id.
+     */
     private function insert_page(int $lessonid, string $title, string $contents, int $prevpageid, int $qtype = 20): int {
         global $DB;
         $page = new \stdClass();

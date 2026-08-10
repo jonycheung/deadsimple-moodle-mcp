@@ -20,15 +20,20 @@ use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\content_search_service;
 use local_simplemcp\service\lesson_content_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests reading mod_page content through the page content adapter.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_simplemcp\repository\moodle_page_repository
  */
 final class page_content_test extends \advanced_testcase {
+    /**
+     * Turns on the Page content adapter, which is off by default.
+     *
+     * @return void
+     */
     private function enable_page_type(): void {
         set_config('enabledcontenttypes', 'lesson,page', 'local_simplemcp');
     }
@@ -45,7 +50,7 @@ final class page_content_test extends \advanced_testcase {
         $learner = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($learner->id, $course->id, 'student');
 
-        // enabledcontenttypes defaults to lesson only - page should be rejected.
+        // The enabledcontenttypes setting defaults to lesson only - page should be rejected.
         $this->expectException(mcp_exception::class);
         (new lesson_content_service())->get_lesson($learner->id, $pagemodule->cmid, 12000);
     }

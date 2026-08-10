@@ -20,23 +20,38 @@ use local_simplemcp\local\config;
 use local_simplemcp\local\request_context;
 use local_simplemcp\service\course_outline_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * MCP tool: the section/activity outline of one course the learner is enrolled in.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_course_outline extends abstract_tool {
+    /**
+     * The tool name exposed over MCP. Must stay stable: clients bind to it.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return 'get_course_outline';
     }
 
+    /**
+     * Model-facing description of what this tool does and how to cite it.
+     *
+     * @return string
+     */
     public function get_description(): string {
         return 'Return the visible structure (sections and lessons) of a ' . config::brand_name() . ' course the '
             . 'authenticated learner is enrolled in. Hidden or unavailable lessons are omitted, not marked locked.';
     }
 
+    /**
+     * JSON-schema-compatible description of this tool's arguments.
+     *
+     * @return array
+     */
     public function get_input_schema(): array {
         return [
             'type' => 'object',
@@ -48,10 +63,22 @@ class get_course_outline extends abstract_tool {
         ];
     }
 
+    /**
+     * The capability a learner needs before this tool is offered or run.
+     *
+     * @return string|null Null means local/simplemcp:use alone is enough.
+     */
     public function get_capability(): ?string {
         return 'local/simplemcp:readowncourses';
     }
 
+    /**
+     * Runs the tool for the authenticated learner in $context.
+     *
+     * @param array $arguments Already validated against get_input_schema().
+     * @param request_context $context Carries the authenticated principal.
+     * @return array MCP tool result envelope.
+     */
     public function execute(array $arguments, request_context $context): array {
         $service = new course_outline_service();
         $outline = $service->get_outline($context->principal->userid, $arguments['courseId']);

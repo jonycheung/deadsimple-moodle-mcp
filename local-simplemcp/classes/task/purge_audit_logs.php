@@ -18,8 +18,6 @@ namespace local_simplemcp\task;
 
 use local_simplemcp\local\config;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Purges audit log rows older than the configured retention window.
  *
@@ -28,10 +26,20 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class purge_audit_logs extends \core\task\scheduled_task {
+    /**
+     * Name shown for this task in the scheduled task admin screen.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return get_string('task:purgeauditlogs', 'local_simplemcp');
     }
 
+    /**
+     * Deletes audit rows older than the configured retention window.
+     *
+     * @return void
+     */
     public function execute(): void {
         global $DB;
         $cutoff = time() - (config::audit_retention_days() * DAYSECS);

@@ -39,6 +39,14 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('Pragma: no-cache');
 
+/**
+ * Emits an RFC 6749 error response and stops.
+ *
+ * @param int $httpstatus HTTP status code to send.
+ * @param string $error OAuth error code, e.g. 'invalid_grant'.
+ * @param string $description Optional human-readable detail.
+ * @return void Never returns; exits.
+ */
 function simplemcp_token_error(int $httpstatus, string $error, string $description = ''): void {
     http_response_code($httpstatus);
     echo json_encode(array_filter([
@@ -99,13 +107,7 @@ try {
     simplemcp_token_error(400, 'invalid_grant');
 } catch (\Throwable $e) {
     // Never let an unexpected failure emit an HTML error page here either.
-    error_log(sprintf(
-        'local_simplemcp oauth/token.php error: %s: %s in %s:%d',
-        get_class($e),
-        $e->getMessage(),
-        $e->getFile(),
-        $e->getLine()
-    ));
+    \local_simplemcp\local\logger::exception('oauth/token.php', $e);
     simplemcp_token_error(500, 'server_error');
 }
 

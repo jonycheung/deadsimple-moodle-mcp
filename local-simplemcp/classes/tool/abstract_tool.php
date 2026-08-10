@@ -18,23 +18,36 @@ namespace local_simplemcp\tool;
 
 use local_simplemcp\local\schema_validator;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Shared behaviour for every MCP tool: schema validation and result shaping.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 abstract class abstract_tool implements tool_interface {
+    /**
+     * The capability a learner needs before this tool is offered or run.
+     *
+     * @return string|null Null means local/simplemcp:use alone is enough.
+     */
     public function get_capability(): ?string {
         return null;
     }
 
+    /**
+     * Checks raw client arguments against this tool's input schema.
+     *
+     * @param array $arguments Raw arguments as sent by the client.
+     * @return array Validated arguments, with declared defaults applied.
+     * @throws \local_simplemcp\local\mcp_exception INVALID_PARAMS on any schema violation.
+     */
     public function validate_arguments(array $arguments): array {
         return schema_validator::validate($this->get_input_schema(), $arguments);
     }
 
     /**
+     *
      * Builds a successful MCP tool result envelope.
      */
     protected function success(string $text, array $structuredcontent): array {

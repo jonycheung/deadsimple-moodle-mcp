@@ -35,9 +35,98 @@ $string['simplemcp:administer'] = 'Administer the Simple MCP server';
 
 // Admin pages.
 $string['adminclients'] = 'OAuth clients';
+$string['admin:clientdeleted'] = 'Client "{$a}" deleted.';
+$string['admin:clientmeta'] = 'Client ID: {$a->clientid} · Type: {$a->type} · Source: {$a->source} · Registered: {$a->registered} · Active tokens: {$a->access} access, {$a->refresh} refresh';
+$string['admin:clientsheading'] = 'Simple MCP OAuth clients';
+$string['admin:collearner'] = 'Learner';
+$string['admin:connectionrevoked'] = 'Connection revoked.';
+$string['admin:delete'] = 'Delete';
+$string['admin:deleteconfirm'] = 'Delete client "{$a->name}" ({$a->clientid})? This permanently removes the client registration and every authorisation code, access token, refresh token and grant associated with it, for every learner. This cannot be undone.';
+$string['admin:deletedaccount'] = '(deleted account)';
+$string['admin:disable'] = 'Disable';
+$string['admin:disabled'] = 'Disabled';
+$string['admin:enable'] = 'Enable';
+$string['admin:enabled'] = 'Enabled';
+$string['admin:noclients'] = 'No OAuth clients are registered yet.';
+$string['admin:oauthdisabled'] = 'OAuth is currently disabled ("Enable OAuth" in plugin settings) — existing clients are listed below but cannot be used to authorise until it is re-enabled.';
+$string['admin:revoke'] = 'Revoke';
+$string['admin:revokeall'] = 'Revoke all tokens';
+$string['admin:suspendedaccount'] = '(suspended)';
+$string['admin:tokensrevoked'] = 'All active tokens for "{$a}" have been revoked.';
 
-// User preferences.
+// Learner-facing connected apps (profile page, oauth/manage.php).
 $string['connectedapps'] = 'Connected apps (MCP)';
+$string['connectedappsheading'] = 'Connected apps';
+$string['manage:appmeta'] = 'Connected: {$a->connected} · Last used: {$a->lastused}';
+$string['manage:empty'] = 'No apps are currently connected to your {$a} account.';
+$string['manage:instructionslink'] = 'Need to connect a new app? See the instructions.';
+$string['manage:never'] = 'never';
+$string['manage:revoke'] = 'Revoke access';
+$string['manage:unknownapp'] = 'Unknown app';
+$string['profile:colapp'] = 'App';
+$string['profile:colconnected'] = 'Connected';
+$string['profile:collastused'] = 'Last used';
+$string['profile:connectlink'] = 'How to connect a new app';
+$string['profile:managelink'] = 'Manage connections';
+$string['profile:noapps'] = 'No apps are currently connected.';
+
+// OAuth consent screen.
+$string['consent:allow'] = 'Allow';
+$string['consent:cancel'] = 'Cancel';
+$string['consent:canlabel'] = '{$a} will be able to:';
+$string['consent:cannotlabel'] = '{$a} will not be able to:';
+$string['consent:can:courses'] = 'See courses you are enrolled in.';
+$string['consent:can:lessons'] = 'Read lessons currently available to you.';
+$string['consent:can:progress'] = 'See your course progress.';
+$string['consent:cannot:grades'] = 'Change grades or completion.';
+$string['consent:cannot:hidden'] = 'Access hidden or locked course content.';
+$string['consent:cannot:otheraccounts'] = 'Access another learner\'s account.';
+$string['consent:cannot:submit'] = 'Submit assessments.';
+$string['consent:intro'] = 'Connect {$a->client} to {$a->brand}';
+$string['consent:err:declined'] = 'The learner declined the request.';
+$string['consent:err:pkcerequired'] = 'PKCE S256 code_challenge is required.';
+$string['consent:err:redirecturi'] = 'Invalid redirect_uri for this client.';
+$string['consent:err:responsetype'] = 'Only response_type=code is supported.';
+$string['consent:err:scope'] = 'Only the {$a} scope is supported.';
+$string['consent:err:unknownclient'] = 'Unknown or disabled client.';
+
+// Learner instructions page.
+$string['instructions:heading'] = 'Connect {$a} to ChatGPT or Claude';
+$string['instructions:unavailable'] = 'Connections are not currently available on this site. Contact an administrator.';
+$string['instructions:intro'] = 'You can connect ChatGPT or Claude directly to your {$a} account so you can ask questions about your courses, get your progress, and read lesson content without leaving the chat. You\'ll sign in with your normal {$a} login and approve the connection yourself — nothing is shared until you do.';
+$string['instructions:serverheading'] = 'Server address';
+$string['instructions:serverintro'] = 'Both apps need this URL when you add the connector:';
+$string['instructions:chatgptheading'] = 'ChatGPT';
+$string['instructions:chatgptbody'] = '<ol>
+<li>Open ChatGPT and go to <strong>Settings → Connectors</strong> (may also be labelled "Apps &amp; Connectors").</li>
+<li>Choose <strong>Add custom connector</strong> (or "Create").</li>
+<li>Enter a name (e.g. "{$a}") and paste the server address above.</li>
+<li>Save, then connect. ChatGPT will send you to this site to log in (if you aren\'t already) and show a consent screen listing what it can and can\'t access.</li>
+<li>Click <strong>Allow</strong>. You\'re connected — try asking about your courses.</li>
+</ol>';
+$string['instructions:claudeheading'] = 'Claude';
+$string['instructions:claudebody'] = '<ol>
+<li>Open Claude and go to <strong>Settings → Connectors</strong>.</li>
+<li>Choose <strong>Add custom connector</strong>.</li>
+<li>Enter a name and paste the server address above.</li>
+<li>Connect, log in if prompted, and approve on the consent screen.</li>
+</ol>';
+$string['instructions:scopeheading'] = 'What the connection can and can\'t do';
+$string['instructions:scopebody'] = '<p>Once approved, a connected app can, acting only as you:</p>
+<ul>
+<li>See courses you are enrolled in.</li>
+<li>Read lessons currently available to you.</li>
+<li>See your course progress.</li>
+</ul>
+<p>It can never:</p>
+<ul>
+<li>Change grades or completion.</li>
+<li>Submit assessments.</li>
+<li>Access another learner\'s account.</li>
+<li>Access hidden or locked course content.</li>
+</ul>';
+$string['instructions:disconnectheading'] = 'Disconnecting';
+$string['instructions:disconnectbody'] = '<p>You can see everything currently connected to your account, and revoke access at any time, from your <a href="{$a->profileurl}">profile page</a> or directly at <a href="{$a->manageurl}">Connected apps</a>. Revoking doesn\'t stop you reconnecting later — you\'ll just see the consent screen again.</p>';
 
 // Settings.
 $string['settings:heading'] = 'Simple MCP server settings';
@@ -50,7 +139,7 @@ $string['settings:scopename_desc'] = 'The single OAuth scope this server grants.
 $string['settings:servername'] = 'MCP server name';
 $string['settings:servername_desc'] = 'Returned as serverInfo.name from the MCP initialize response. Leave blank to derive a slug from this site\'s shortname.';
 $string['settings:enabledcontenttypes'] = 'Enabled content types';
-$string['settings:enabledcontenttypes_desc'] = 'Which activity types get_lesson_content, get_lesson_section, get_course_outline, get_next_lesson and search_my_course_content are allowed to read. Only Lesson is confirmed in use on this site (see docs/mcp-discovery.md); enabling Page or Book requires those content adapters to actually be needed on this Moodle install.';
+$string['settings:enabledcontenttypes_desc'] = 'Which activity types get_lesson_content, get_lesson_section, get_course_outline, get_next_lesson and search_my_course_content are allowed to read. Only Lesson is confirmed in use on this site; enabling Page or Book requires those content adapters to actually be needed on this Moodle install.';
 $string['settings:contenttype_lesson'] = 'Lesson (mod_lesson)';
 $string['settings:contenttype_page'] = 'Page (mod_page)';
 $string['settings:contenttype_book'] = 'Book (mod_book)';

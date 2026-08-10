@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Read-only access to the courses a learner is actively enrolled in.
  * Never accepts a caller-supplied userid — always the authenticated
@@ -29,6 +27,8 @@ defined('MOODLE_INTERNAL') || die();
  */
 class learner_course_service {
     /**
+     * Lists the courses a learner is currently enrolled in and may see.
+     *
      * @return array[] Course DTOs, per docs/mcp-poc-plan.md §10.1.
      */
     public function get_my_courses(int $userid, bool $includecompleted = true): array {
@@ -68,6 +68,13 @@ class learner_course_service {
         return $result;
     }
 
+    /**
+     * Reduces stored HTML to a short plain-text summary.
+     *
+     * @param string $html The stored HTML.
+     * @param int $maxchars Maximum characters to keep.
+     * @return string
+     */
     private static function plain_excerpt(string $html, int $maxchars): string {
         $plain = trim(html_entity_decode(strip_tags($html), ENT_QUOTES));
         $plain = preg_replace('/\s+/u', ' ', $plain);

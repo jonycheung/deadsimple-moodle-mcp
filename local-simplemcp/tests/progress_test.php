@@ -19,9 +19,9 @@ namespace local_simplemcp;
 use local_simplemcp\local\mcp_exception;
 use local_simplemcp\service\progress_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
+ * Tests course progress and next-activity reporting.
+ *
  * @package    local_simplemcp
  * @copyright  2026 Online Bible College
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

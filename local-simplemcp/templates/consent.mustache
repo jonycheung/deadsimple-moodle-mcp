@@ -1,0 +1,72 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_simplemcp/consent
+
+    OAuth consent screen shown to a learner before an MCP client is granted
+    access to their own courses.
+
+    Context variables required for this template:
+    * heading - Plugin name shown as the page heading.
+    * introhtml - Already-escaped "Connect <client> to <brand>" sentence.
+    * canlabel - Heading for the list of things the client will be able to do.
+    * cannotlabel - Heading for the list of things the client will not be able to do.
+    * can - Array of {text} the client will be able to do.
+    * cannot - Array of {text} the client will not be able to do.
+    * allowlabel - Label for the approve button.
+    * cancellabel - Label for the decline button.
+    * formfields - Array of {name, value} hidden inputs to replay on submit.
+
+    Example context (json):
+    {
+        "heading": "Simple MCP Server",
+        "introhtml": "Connect <strong>ChatGPT</strong> to Example College",
+        "canlabel": "ChatGPT will be able to:",
+        "cannotlabel": "ChatGPT will not be able to:",
+        "can": [{"text": "See courses you are enrolled in."}],
+        "cannot": [{"text": "Change grades or completion."}],
+        "allowlabel": "Allow",
+        "cancellabel": "Cancel",
+        "formfields": [{"name": "sesskey", "value": "abc123"}]
+    }
+}}
+<div class="box generalbox local-simplemcp-consent">
+    <h2>{{heading}}</h2>
+    <p>{{{introhtml}}}</p>
+
+    <p>{{canlabel}}</p>
+    <ul>
+        {{#can}}
+            <li>{{text}}</li>
+        {{/can}}
+    </ul>
+
+    <p>{{cannotlabel}}</p>
+    <ul>
+        {{#cannot}}
+            <li>{{text}}</li>
+        {{/cannot}}
+    </ul>
+
+    <form method="post">
+        {{#formfields}}
+            <input type="hidden" name="{{name}}" value="{{value}}">
+        {{/formfields}}
+        <button type="submit" name="simplemcp_decision" value="allow" class="btn btn-primary">{{allowlabel}}</button>
+        <button type="submit" name="simplemcp_decision" value="deny" class="btn btn-secondary">{{cancellabel}}</button>
+    </form>
+</div>

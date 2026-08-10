@@ -72,36 +72,31 @@ if ($revokeid && confirm_sesskey()) {
 
 $grants = $DB->get_records('local_simplemcp_grant', ['userid' => $USER->id, 'timerevoked' => null]);
 
-echo $OUTPUT->header();
-echo $OUTPUT->heading('Connected apps');
-?>
-<div class="box generalbox" style="max-width: 40em;">
-<?php
-echo html_writer::tag('p', html_writer::link(
-    new moodle_url('/local/simplemcp/oauth/instructions.php'),
-    'Need to connect a new app? See the instructions.'
-));
-
-if (empty($grants)) {
-    echo html_writer::tag('p', 'No apps are currently connected to your ' . s(simplemcpconfig::brand_name()) . ' account.');
-} else {
-    foreach ($grants as $grant) {
-        $client = $DB->get_record('local_simplemcp_client', ['id' => $grant->clientid]);
-        $clientname = $client ? format_string($client->name) : 'Unknown app';
-        $lastused = $grant->timelastused ? userdate($grant->timelastused) : 'never';
-
-        echo html_writer::start_tag('div', ['class' => 'card mb-2']);
-        echo html_writer::start_tag('div', ['class' => 'card-body']);
-        echo html_writer::tag('h5', s($clientname), ['class' => 'card-title']);
-        echo html_writer::tag('p', "Connected: " . userdate($grant->timecreated) . " · Last used: $lastused", ['class' => 'card-text']);
-
-        $revokeurl = new moodle_url('/local/simplemcp/oauth/manage.php', ['revoke' => $grant->id, 'sesskey' => sesskey()]);
-        echo html_writer::link($revokeurl, 'Revoke access', ['class' => 'btn btn-secondary btn-sm']);
-        echo html_writer::end_tag('div');
-        echo html_writer::end_tag('div');
-    }
+$apps = [];
+foreach ($grants as $grant) {
+    $client = $DB->get_record('local_simplemcp_client', ['id' => $grant->clientid]);
+    $apps[] = [
+        'name' => $client ? format_string($client->name) : get_string('manage:unknownapp', 'local_simplemcp'),
+        'meta' => get_string('manage:appmeta', 'local_simplemcp', [
+            'connected' => userdate($grant->timecreated),
+            'lastused' => $grant->timelastused
+                ? userdate($grant->timelastused)
+                : get_string('manage:never', 'local_simplemcp'),
+        ]),
+        'revokeurl' => (new moodle_url(
+            '/local/simplemcp/oauth/manage.php',
+            ['revoke' => $grant->id, 'sesskey' => sesskey()]
+        ))->out(false),
+        'revokelabel' => get_string('manage:revoke', 'local_simplemcp'),
+    ];
 }
-?>
-</div>
-<?php
+
+echo $OUTPUT->header();
+echo $OUTPUT->heading(get_string('connectedappsheading', 'local_simplemcp'));
+echo $OUTPUT->render_from_template('local_simplemcp/connectedapps', [
+    'instructionsurl' => (new moodle_url('/local/simplemcp/oauth/instructions.php'))->out(false),
+    'instructionslabel' => get_string('manage:instructionslink', 'local_simplemcp'),
+    'emptymessage' => get_string('manage:empty', 'local_simplemcp', s(simplemcpconfig::brand_name())),
+    'apps' => $apps,
+]);
 echo $OUTPUT->footer();

@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\local;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Shared course-level access check used by every service that operates on
  * a courseId: the course must be visible and the learner must hold an
@@ -30,6 +28,14 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class access_guard {
+    /**
+     * Fails closed unless this learner may see this course right now.
+     *
+     * @param int $userid The learner the request is acting as.
+     * @param \stdClass $course The course being accessed.
+     * @return void
+     * @throws mcp_exception PERMISSION_DENIED if the learner is not enrolled or the course is hidden.
+     */
     public static function assert_course_accessible(int $userid, \stdClass $course): void {
         $accessible = $course->visible
             && is_enrolled(\context_course::instance($course->id), $userid, '', true);

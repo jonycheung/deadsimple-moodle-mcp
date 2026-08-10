@@ -16,8 +16,6 @@
 
 namespace local_simplemcp\service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Converts Moodle-stored lesson HTML into model-facing HTML.
  *
@@ -45,7 +43,14 @@ class content_formatter {
      * stored HTML — used by the mod_page and mod_book adapters, which have
      * their own component/filearea/itemid for embedded files.
      */
-    public static function format_html(string $html, int $format, \context $context, string $component, string $filearea, int $itemid): string {
+    public static function format_html(
+        string $html,
+        int $format,
+        \context $context,
+        string $component,
+        string $filearea,
+        int $itemid
+    ): string {
         $rewritten = file_rewrite_pluginfile_urls($html, 'pluginfile.php', $context->id, $component, $filearea, $itemid);
 
         return format_text($rewritten, $format, [
