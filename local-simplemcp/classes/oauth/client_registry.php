@@ -1,0 +1,61 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_simplemcp\oauth;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * OAuth clients: registered either by an admin via
+ * cli/register_oauth_client.php, or dynamically by the client itself via
+ * oauth/register.php (RFC 7591, when the enabledynamicregistration
+ * setting is on) — see the "registrationsource" column.
+ *
+ * @package    local_simplemcp
+ * @copyright  2026 Online Bible College
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class client_registry {
+    public function find_by_clientid(string $clientid): ?\stdClass {
+        global $DB;
+        $client = $DB->get_record('local_simplemcp_client', ['clientid' => $clientid, 'enabled' => 1]);
+        return $client ?: null;
+    }
+
+    /**
+     * Exact string match only — no wildcard/prefix matching, per the plan's
+     * "strict redirect-URI validation" requirement.
+     */
+    public function is_redirect_uri_allowed(\stdClass $client, string $redirecturi): bool {
+        $allowed = json_decode($client->redirecturis, true);
+        if (!is_array($allowed)) {
+            return false;
+        }
+        return in_array($redirecturi, $allowed, true);
+    }
+
+    public function verify_secret(\stdClass $client, ?string $secret): bool {
+        if ($client->clienttype !== 'confidential') {
+            // Public clients (PKCE-only) authenticate via the code_verifier,
+            // not a client secret.
+            return true;
+        }
+        if ($secret === null || $client->secrethash === null) {
+            return false;
+        }
+        return hash_equals($client->secrethash, hash('sha256', $secret));
+    }
+}
