@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Admin interface screenshot placeholder</title>
+  <desc id="desc">Placeholder image for admin interface screenshots in README</desc>
+  <rect width="1280" height="720" fill="#f5f7fb"/>
+  <rect x="60" y="60" width="1160" height="600" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="90" y="100" width="700" height="32" rx="6" fill="#eaeef2"/>
+  <rect x="90" y="160" width="1100" height="200" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+  <rect x="90" y="390" width="1100" height="210" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="640" y="340" text-anchor="middle" font-size="36" fill="#24292f" font-family="Arial, sans-serif">Admin Interface Screenshot</text>
+  <text x="640" y="390" text-anchor="middle" font-size="24" fill="#57606a" font-family="Arial, sans-serif">Replace with a real capture from settings + OAuth clients pages</text>
+</svg>
