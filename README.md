@@ -53,6 +53,22 @@ Then configure it: **Site administration → Plugins → Local plugins → Simpl
 Server**. See [`local-simplemcp/README.md`](local-simplemcp/README.md) for the
 full setup, including the nginx alias OAuth discovery needs.
 
+## How it works in Moodle (screenshots)
+
+### Learner interface
+
+Learners connect their MCP client, review consent, and manage connected apps from
+their profile:
+
+![Learner interface screenshot showing connected apps and consent flow](assets/screenshots/learner-interface.svg)
+
+### Admin interface
+
+Admins configure the plugin and manage OAuth clients from Moodle's site
+administration area:
+
+![Admin interface screenshot showing plugin settings and OAuth client management](assets/screenshots/admin-interface.svg)
+
 ## Development
 
 Everything below needs Docker and `make`. Nothing else — no local PHP, no local
